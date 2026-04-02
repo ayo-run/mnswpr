@@ -3,25 +3,29 @@ export const levels = {
     rows: 9,
     cols: 9,
     mines: 10,
-    name: 'beginner'
+    id: 'beginner',
+    name: 'Noobs'
   },
   intermediate: {
     rows: 16,
     cols: 16,
     mines: 40,
-    name: 'intermediate'
+    id: 'intermediate',
+    name: 'Normies'
   },
   expert: {
     rows: 16,
     cols: 30,
     mines: 99,
-    name: 'expert'
+    id: 'expert',
+    name: 'Torment'
   },
   nightmare: {
     rows: 20,
     cols: 30,
     mines: 150,
-    name: 'nightmare'
+    id: 'nightmare',
+    name: 'Hell'
   }
 }
 

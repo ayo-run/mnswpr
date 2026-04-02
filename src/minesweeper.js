@@ -69,6 +69,7 @@ export const Minesweeper = function(appId) {
       rows: 10,
       cols: 10,
       mines: 10,
+      id: 'test',
       name: 'test'
     }
   }
@@ -103,7 +104,7 @@ export const Minesweeper = function(appId) {
 
   function initializeLeaderBoard() {
     const title = `Best Times (${setting.name})`
-    leaderBoard.update(setting.name, leaderWrapper, title)
+    leaderBoard.update(setting.id, leaderWrapper, title)
 
     if(appElement)
       appElement.append(leaderWrapper)
@@ -123,9 +124,9 @@ export const Minesweeper = function(appId) {
     const levelsKeys = Object.keys(levels)
     levelsKeys.forEach(key => {
       const levelOption = document.createElement('option')
-      levelOption.value = levels[key].name
-      levelOption.text = capitalize(levels[key].name)
-      if (setting.name === levelOption.value) {
+      levelOption.value = levels[key].id
+      levelOption.text = levels[key].name
+      if (setting.id === levelOption.value) {
         levelOption.selected = true
       }
       levelsDropdown.add(levelOption, null)
@@ -187,11 +188,6 @@ export const Minesweeper = function(appId) {
 
     customWrapper.append(...inputElements, okButton)
     footbar.append(customWrapper)
-  }
-
-  function capitalize(str) {
-    if (!str) return ''
-    return `${str[0].toUpperCase()}${str.slice(1, str.length)}`
   }
 
   function initializeToolbar() {
@@ -532,7 +528,7 @@ export const Minesweeper = function(appId) {
     const game = {
       time,
       status: win ? 'win' : 'loss',
-      level: setting.name,
+      level: setting.id,
       time_stamp: new Date(),
       isMobile
     }
