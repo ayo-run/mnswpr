@@ -16,13 +16,19 @@
     "build": "vite build",
     "preview": "vite preview",
     "build:preview": "npm run build && npm run preview",
-    "prepare": "husky"
+    "prepare": "husky",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "license": "BSD-2-Clause",
   "dependencies": {
     "firebase": "^12.11.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
     "husky": "^9.1.7",
     "vite": "^8.0.3"
   }
