@@ -26,14 +26,28 @@ export default defineConfig([
   },
   {
     files: ['**/*.{js,mjs,cjs}'],
-    plugins: { js, '@stylistic': stylistic},
+    plugins: {
+      js, '@stylistic': stylistic 
+    },
     extends: ['js/recommended'],
-    languageOptions: { globals: globals.browser },
+    languageOptions: {
+      globals: globals.browser 
+    },
     rules: {
       '@stylistic/indent': ['error', 2],
       '@stylistic/quotes': ['error', 'single'],
       '@stylistic/semi': ['error', 'never'],
-      '@stylistic/comma-dangle': ['error', 'never'] 
+      '@stylistic/comma-dangle': ['error', 'never'] ,
+      '@stylistic/block-spacing': 'error',
+      '@stylistic/array-bracket-spacing': ['error', 'never'],
+      '@stylistic/object-curly-spacing': ['error', 'always'],
+      '@stylistic/key-spacing': ['error', {
+        'beforeColon': false 
+      }],
+      '@stylistic/array-bracket-newline': ['error', 'consistent'],
+      '@stylistic/object-curly-newline': ['error', {
+        'consistent': true
+      }]
     }
   },
   globalIgnores(['dist'])

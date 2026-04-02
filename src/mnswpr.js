@@ -175,7 +175,11 @@ export const Minesweeper = function(appId) {
 
     const okButton = document.createElement('button')
     okButton.innerText = 'Okay'
-    const setting = {rows: rowsInput.value, cols: colsInput.value, bombs: bombsInput.value}
+    const setting = {
+      rows: rowsInput.value,
+      cols: colsInput.value,
+      bombs: bombsInput.value 
+    }
     okButton.onmousedown = () => updateSetting('custom-action', setting)
 
     inputElements.forEach(input => {

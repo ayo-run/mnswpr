@@ -4,7 +4,9 @@ import { LoadingService } from '../loading/loading'
 import { LoggerService } from '../logger/logger'
 
 import { initializeApp } from 'firebase/app'
-import { getFirestore, doc, getDocs, getDoc, setDoc, collection, query, orderBy, limit } from 'firebase/firestore/lite'
+import {
+  getFirestore, doc, getDocs, getDoc, setDoc, collection, query, orderBy, limit 
+} from 'firebase/firestore/lite'
 
 
 export class LeaderBoardService {
@@ -136,11 +138,11 @@ export class LeaderBoardService {
   async send(game, key) {
     const sessionId = new Date().toDateString().replace(/\s/g, '_')
     const gameId = new Date().toTimeString().replace(/\s/g, '_')
-    const data = {}
+    const data = { }
     data[gameId] = game
     
     const sessionRef = doc(this.store, 'mw-all', this.user.browserId, 'games', sessionId)
-    await setDoc(sessionRef, data, {merge: true})
+    await setDoc(sessionRef, data, { merge: true })
 
     if (this.configuration && game.status === this.configuration.passingStatus && game[key] < this.lastPlace) {
       let name = window.prompt(this.configuration.message)
