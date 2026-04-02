@@ -15,11 +15,14 @@ console.log('Checkout release branch')
 //git checkout -b release --track gh/release
 await git.checkout(['-b', 'release', '--track', 'gh/release'])
 
-// console.log(`Reset to main branch (${hash})`)
-// await git.reset(['--hard', hash])
+console.log(`Reset to main branch (${hash})`)
+await git.reset(['--hard', hash])
 
-// console.log('Push to release branch')
-// await git.push(['--force'])
+console.log('Push to release branch')
+await git.push(['--force', 'gh'])
 
-// console.log('Checkout main branch')
-// await git.checkout('main')
+console.log('Checkout main branch')
+await git.checkout('main')
+
+console.log('Deleting local release branch')
+await git.branch(['-D', 'release'])
