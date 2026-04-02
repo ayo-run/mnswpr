@@ -1,5 +1,4 @@
 import './modules/loading/loading.css'
-import '../public/favicon.ico'
 import './mnswpr.css'
 import Minesweeper from './mnswpr.js'
 
