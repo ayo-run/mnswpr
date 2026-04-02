@@ -9,7 +9,7 @@ Technology Stack:
 - Netlify for hosting
 
 Development tooling:
-- [Vite](https://vite.dev/) for bundling
+- [Vite](https://vite.dev/) for bundling and development server
 - [Eslint](https://eslint.org) for JS linting & [CSS linting](https://eslint.org/blog/2025/02/eslint-css-support/)
 - [ESLint Stylistic](https://eslint.style) for JS formatting
 - [Husky](https://typicode.github.io/husky/) for git hooks
