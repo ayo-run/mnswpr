@@ -16,7 +16,7 @@
     "build": "vite build",
     "prepare": "husky"
   },
-  "license": "ISC",
+  "license": "BSD-2-Clause",
   "dependencies": {
     "firebase": "^12.11.0"
   },
