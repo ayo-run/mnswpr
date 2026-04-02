@@ -104,15 +104,13 @@ export const Minesweeper = function(appId) {
   async function initializeLeaderBoard() {
     const title = `Best Times (${setting.name})`
 
-    // remove existing leaderboard
     const previousLeaderBoard = document.getElementById('leaderboard')
-    const parent = previousLeaderBoard?.parentNode
-    if (previousLeaderBoard)
-      parent?.removeChild(previousLeaderBoard)
-
     let loading = document.createElement('div')
     loadingService.addLoading(loading)
-    appElement?.append(loading)
+    if (previousLeaderBoard)
+      appElement?.replaceChild(loading, previousLeaderBoard)
+    else
+      appElement?.append(loading)
 
     const leaderBoard = await leaderBoardService.update(setting.id ?? setting.name, title)
     leaderBoard.id = 'leaderboard'
@@ -124,7 +122,7 @@ export const Minesweeper = function(appId) {
 
     const resetButton = document.createElement('button')
     resetButton.innerText = 'Reset'
-    resetButton.onmousedown = () => generateGrid()
+    resetButton.onmousedown = () => location.reload()
     footBar.append(resetButton)
 
     let levelsDropdown = document.createElement('select')
@@ -196,8 +194,6 @@ export const Minesweeper = function(appId) {
 
 
   function generateGrid() {
-
-    //generate 10 by 10 grid
     firstClick = true
     grid.innerHTML = ''
     grid.oncontextmenu = () => false
