@@ -12,7 +12,7 @@ import { levels } from './levels.js'
 import * as pkg from '../package.json'
 
 const TEST_MODE = false // set to true if you want to test the game with visual hints and separate leaderboard
-const VERSION = pkg.version
+const VERSION = import.meta.env.MODE === 'development' ? 'dev' : `v${pkg.version}`
 const MOBILE_BUSY_DELAY = 250
 const PC_BUSY_DELAY = 500
 const CASUAL_MODE = false
@@ -79,7 +79,8 @@ export const Minesweeper = function(appId) {
     const headingElement = document.createElement('h1')
     const gameBoard = document.createElement('div')
 
-    headingElement.innerHTML = `<span>Minesweeper</span><sup>v${VERSION}</sup>`
+    headingElement.innerHTML = `<span>Minesweeper</span><sup>${VERSION}</sup>`
+    document.title = `mnswpr [${VERSION}]`
     gameBoard.setAttribute('id', 'game-board')
     gameBoard.append(initializeToolbar(), grid, initializeFootbar())
     if(appElement) {
