@@ -1,18 +1,13 @@
-// @ts-check
 // forked from https://github.com/elk-zone/elk/blob/main/scripts/release.ts
-
 import {simpleGit, } from 'simple-git'
 
-
 const git = simpleGit()
-
 const hash = await git.revparse(['main'])
 
 console.log('Fetch remote gh repo')
 await git.fetch('gh')
 
 console.log('Checkout release branch')
-//git checkout -b release --track gh/release
 await git.checkout(['-b', 'release', '--track', 'gh/release'])
 
 console.log(`Reset to main branch (${hash})`)

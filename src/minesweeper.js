@@ -5,7 +5,7 @@ import {
   LoggerService,
   StorageService,
   TimerService
-} from './modules'
+} from './modules/index.js'
 import { levels } from './levels.js'
 
 import * as pkg from '../package.json'
@@ -270,8 +270,6 @@ export const Minesweeper = function(appId) {
     grid.setAttributeNode(gameStatus)
 
     if (appElement) {
-      // appElement.style.minWidth = '260px'
-      // appElement.style.width = `${grid.offsetWidth + 40}px`
       appElement.style.margin = '0 auto'
     }
 
