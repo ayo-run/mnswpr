@@ -5,7 +5,7 @@ Play it here: [mnswpr.com](https://mnswpr.com). This is the classic game **Mines
 
 Technology Stack:
 - HTML, JS, and CSS
-- Webpack for bundling
+- Vite for bundling
 - Firebase for leader board store
 - Netlify for hosting
 
