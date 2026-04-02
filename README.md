@@ -33,13 +33,5 @@ To start development, you need node v16 (the dev server doesn't work on v18 *yet
 1. Install dependencies: `npm i`
 2. Start the dev server: `npm run dev`
 
-## Running Locally
-After running the commands to start development, open in a browser: `http://localhost:4200`
-
-## Contribution reminders
-
-1. There's no hot reloading. You have to reload the app after making a change. OR contribute to enable HMR? ;)
-2. This is a very messy code; a product of quick hacking and shipping while live users are giving feedback. Let's clean it up!
-
 ## Live Demo
 *👉 The live site is here: [Minesweeper](https://mnswpr.com)*
