@@ -1,23 +1,25 @@
 // @ts-check
 // forked from https://github.com/elk-zone/elk/blob/main/scripts/release.ts
 
-import Git from 'simple-git'
+import {simpleGit, } from 'simple-git'
 
 
-const git = Git()
-const upstream = 'gh'
+const git = simpleGit()
 
 const hash = await git.revparse(['main'])
 
-console.log('Checkout release branch')
+console.log('Fetch remote gh repo')
 await git.fetch('gh')
-await git.checkout(`${upstream}/release`, {l})
 
-console.log(`Reset to main branch (${hash})`)
-await git.reset(['--hard', hash])
+console.log('Checkout release branch')
+//git checkout -b release --track gh/release
+await git.checkout(['-b', 'release', '--track', 'gh/release'])
 
-console.log('Push to release branch')
-await git.push(['--force'])
+// console.log(`Reset to main branch (${hash})`)
+// await git.reset(['--hard', hash])
 
-console.log('Checkout main branch')
-await git.checkout('main')
+// console.log('Push to release branch')
+// await git.push(['--force'])
+
+// console.log('Checkout main branch')
+// await git.checkout('main')
