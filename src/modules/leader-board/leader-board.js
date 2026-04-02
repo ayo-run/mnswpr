@@ -1,43 +1,74 @@
-import { DatabaseService } from '../database/db';
 import { TimerService } from '../timer/timer';
 import { UserService } from '../user/user';
 import { LoadingService } from '../loading/loading';
 import { LoggerService } from '../logger/logger';
 
-const dbService = new DatabaseService();
-const timerService = new TimerService();
-const loadingService = new LoadingService();
-const loggerService = new LoggerService();
-const db = dbService.store;
-const user = new UserService();
-let previousLevel;
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, getDocs, getDoc, setDoc, collection, query, orderBy, limit } from 'firebase/firestore/lite';
+
 
 export class LeaderBoardService {
-    constructor(leaders, all, configuration) {
-        this.leaders = db.collection(leaders);
-        this.all = db.collection(all);
-        db.collection(configuration)
-            .doc('configuration')
-            .get()
+
+    timerService = new TimerService();
+    loadingService = new LoadingService();
+    loggerService = new LoggerService();
+    user = new UserService();
+    previousLevel;
+
+    /**
+     * 
+     * Create the Leader Board service
+     * @param {String} leaders 
+     * @param {String} all 
+     * @param {String} configuration 
+     */
+    constructor() {
+
+        // necessary keys to interact with firebase
+        // not a secret
+        // https://stackoverflow.com/questions/37482366/is-it-safe-to-expose-firebase-apikey-to-the-public/37484053#37484053
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const config = {
+            apiKey: "AIzaSyCTi_5Sm5dHFNf0d_Gn0MNWmlGheFBf6MQ",
+            authDomain: "moment-188701.firebaseapp.com",
+            databaseURL: "https://moment-188701.firebaseio.com",
+            projectId: "secure-moment-188701",
+            storageBucket: "secure-moment-188701.firebasestorage.app",
+            messagingSenderId: "113827947104",
+            appId: "1:113827947104:web:b176f746d8358302c51905",
+            measurementId: "G-LZRDY0TG46"
+        };
+        console.log('Initializing firebase app...');
+        const app = initializeApp(config);
+        this._store = getFirestore(app);
+
+        const configRef = doc(this.store, 'mw-config', 'configuration')
+        getDoc(configRef)
             .then(res => {
-                this.configuration = res.data();
-                this.configurationPromt();
+                this.configuration = res.data()
+                console.log('Received config', this.configuration)
             })
-            .catch(err => console.error(err));
     }
 
-    update(level, displayElement, title) {
-        if (level !== previousLevel) {
-            loadingService.addLoading(displayElement);
-            previousLevel = level;
-            if (this.unsubscribe) {
-                this.unsubscribe();
-            }
+    get store() {
+        return this._store;
+    }
+
+    async update(level, displayElement, title) {
+
+        if (level !== this.previousLevel) {
+            console.log('updating leaderboard...')
+            this.loadingService.addLoading(displayElement);
+            this.previousLevel = level;
             this.lastPlace = Number.MAX_SAFE_INTEGER;
-            // todo: use 'where' to filter by day, week, month, and all-time
-            this.topList = this.leaders.doc(level)
-                .collection('games').orderBy('time').limit(10);
-            this.unsubscribe = this.setListener(this.topList, displayElement, title);
+
+            const q = query(
+                collection(this.store, "mw-leaders", level, 'games'),
+                orderBy('time'),
+                limit(10)
+            );
+            this.topListSnapshot = await getDocs(q)
+            this.renderList(displayElement, title, this.topListSnapshot.docs)
         }
 
     }
@@ -66,7 +97,7 @@ export class LeaderBoardService {
             let i = 1;
             docs.forEach(game => {
                 if (game) {
-                    const prettyTime = timerService.pretty(game.data().time);
+                    const prettyTime = this.timerService.pretty(game.data().time);
                     const name = game.data().name || 'Anonymous';
                     const item = document.createElement('div');
                     item.style.display = 'flex';
@@ -104,19 +135,19 @@ export class LeaderBoardService {
         }
     }
 
-    setListener(collection, displayElement, title) {
-        return collection.onSnapshot(list => this.renderList(displayElement, title, list.docs));
-    }
 
-    send(game, key) {
+    async send(game, key) {
         const sessionId = new Date().toDateString().replace(/\s/g, '_');
         const gameId = new Date().toTimeString().replace(/\s/g, '_');
         const data = {};
         data[gameId] = game;
-        this.all.doc(user.browserId).collection('games').doc(sessionId).set(data, {merge: true});
-
+    
+        const sessionRef = doc(this.store, 'mw-all', this.user.browserId, 'games', sessionId)
+        console.log('adding a session in mw-all...', data)
+        await setDoc(sessionRef, data, {merge: true})
 
         if (this.configuration && game.status === this.configuration.passingStatus && game[key] < this.lastPlace) {
+            console.log('setting score...', data)
             let name = window.prompt(this.configuration.message);
             if (!name) {
                 name = 'Anonymous';
@@ -124,11 +155,12 @@ export class LeaderBoardService {
 
             const newGame = {
                 name,
-                browserId: user.browserId,
+                browserId: this.user.browserId,
                 ...game
             }
 
-            this.leaders.doc(game.level).collection('games').add(newGame);
+            const gameScoreRef = doc(collection(this.store, 'mw-leaders', game.level, 'games'))
+            await setDoc(gameScoreRef, newGame)
         }
     }
 

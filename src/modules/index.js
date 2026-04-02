@@ -1,4 +1,3 @@
-export * from './database/db.js';
 export * from './dialog/dialog.js';
 export * from './leader-board/leader-board.js';
 export * from './loading/loading.js';
