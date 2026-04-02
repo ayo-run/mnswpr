@@ -1,9 +1,29 @@
+// @ts-check
+
 import js from '@eslint/js'
+import css from '@eslint/css'
 import globals from 'globals'
 import { defineConfig, globalIgnores } from 'eslint/config'
 import stylistic from '@stylistic/eslint-plugin'
 
 export default defineConfig([
+  {
+    files: ['**/*.css'],
+    plugins: {
+      css
+    },
+    languageOptions: {
+      tolerant: true
+    },
+    language: 'css/css',
+    rules: {
+      'css/no-duplicate-imports': 'error',
+      'css/no-empty-blocks': 'error',
+      'css/no-invalid-at-rules': 'error',
+      'css/no-invalid-properties': 'error'
+    },
+    ignores: ['./src/modules/loading/loading.css']
+  },
   {
     files: ['**/*.{js,mjs,cjs}'],
     plugins: { js, '@stylistic': stylistic},
