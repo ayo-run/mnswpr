@@ -3,6 +3,7 @@
   "version": "0.3.13",
   "description": "Classic Minesweeper browser game",
   "author": "Ayo Ayco",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/ayoayco/mnswpr"
@@ -10,27 +11,17 @@
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently --kill-others \"npm run watch:dev\" \"npm start\"",
-    "start:dev": "concurrently --kill-others \"npm run watch:dev\" \"npm start\"",
-    "start": "http-server ./dist/ -a localhost -p 4200",
-    "watch:dev": "node ./node_modules/webpack/bin/webpack.js --watch --mode development .",
-    "buildprod": "node ./node_modules/webpack/bin/webpack.js --mode production .",
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
     "prepare": "husky"
   },
   "license": "ISC",
   "dependencies": {
-    "firebase": "^12.9.0"
+    "firebase": "^12.11.0"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
-    "css-loader": "^7.1.4",
-    "file-loader": "^6.2.0",
-    "http-server": "^14.1.1",
     "husky": "^9.1.7",
-    "mini-css-extract-plugin": "^2.10.0",
-    "optimize-css-assets-webpack-plugin": "^6.0.1",
-    "terser-webpack-plugin": "^5.3.16",
-    "webpack": "^5.105.2",
-    "webpack-cli": "^6.0.1"
+    "vite": "^8.0.3"
   }
 }

@@ -887,3 +887,5 @@ export const Minesweeper = function(appId) {
         }
     }
 }
+
+export default Minesweeper
