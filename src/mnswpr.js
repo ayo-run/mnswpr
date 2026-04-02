@@ -34,9 +34,6 @@ export const Minesweeper = function(appId) {
   let flagsDisplay = document.createElement('span')
   let smileyDisplay = document.createElement('span')
   let timerDisplay = document.createElement('span')
-  let footbar = document.createElement('div')
-  let customWrapper = document.createElement('div')
-  customWrapper.setAttribute('id', 'custom-wrapper')
   let appElement = document.getElementById(appId)
   if (!appElement) {
     const body = document.getElementsByTagName('body')[0]
@@ -143,12 +140,7 @@ export const Minesweeper = function(appId) {
       levelsDropdown.add(levelOption, null)
     })
 
-    // custom level
-    // const customOption = document.createElement('option');
-    // customOption.onmousedown = () => {}
-    // customOption.value = 'custom';
-    // customOption.text = 'Custom';
-    // levelsDropdown.add(customOption);
+    
 
     if (TEST_MODE) {
       const testLevel = document.createElement('span')
@@ -159,50 +151,6 @@ export const Minesweeper = function(appId) {
     }
 
     return footBar
-  }
-
-  function removeCustomOptions() {
-    const customCopy = document.getElementById('custom-wrapper')
-    if (customCopy) {
-      footbar.removeChild(customWrapper)
-    }
-  }
-
-  function insertCustomOptions() {
-        
-    const inputElements = []
-
-    const rowsInput = document.createElement('input')
-    rowsInput.placeholder = 'Rows'
-    inputElements.push(rowsInput)
-
-    const colsInput = document.createElement('input')
-    colsInput.placeholder = 'Columns'
-    inputElements.push(colsInput)
-
-    const bombsInput = document.createElement('input')
-    bombsInput.placeholder = 'Bombs'
-    inputElements.push(bombsInput)
-
-    const okButton = document.createElement('button')
-    okButton.innerText = 'Okay'
-    const setting = {
-      rows: rowsInput.value,
-      cols: colsInput.value,
-      bombs: bombsInput.value 
-    }
-    okButton.onmousedown = () => updateSetting('custom-action', setting)
-
-    inputElements.forEach(input => {
-      input.style.marginRight = '15px'
-      input.style.width = '100px'
-      input.maxLength = 3
-      input.type = 'number'
-      input.width = 50
-    })
-
-    customWrapper.append(...inputElements, okButton)
-    footbar.append(customWrapper)
   }
 
   function initializeToolbar() {
@@ -238,19 +186,11 @@ export const Minesweeper = function(appId) {
   /**
    * Updates the game level
    * @param {String} key 
-   * @param {String} custom 
    */
-  function updateSetting(key, custom) {
-    if (key === 'custom') {
-      insertCustomOptions()
-    } else if (key === 'custom-action') {
-      console.log('custom', custom)
-    } else {
-      setting = levels[key]
-      storageService.saveToLocal('setting', setting)
-      removeCustomOptions()
-      generateGrid()
-    }
+  function updateSetting(key) {
+    setting = levels[key]
+    storageService.saveToLocal('setting', setting)
+    generateGrid()
   }
 
 
