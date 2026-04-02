@@ -104,7 +104,7 @@ export const Minesweeper = function(appId) {
 
   function initializeLeaderBoard() {
     const title = `Best Times (${setting.name})`
-    leaderBoard.update(setting.id, leaderWrapper, title)
+    leaderBoard.update(setting.id ?? setting.name, leaderWrapper, title)
 
     if(appElement)
       appElement.append(leaderWrapper)
