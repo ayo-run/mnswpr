@@ -15,7 +15,6 @@ const TEST_MODE = false // set to true if you want to test the game with visual 
 const VERSION = import.meta.env.MODE === 'development' ? 'dev' : `v${pkg.version}`
 const MOBILE_BUSY_DELAY = 250
 const PC_BUSY_DELAY = 500
-const CASUAL_MODE = false
 
 /**
  * Create Minesweeper game board
@@ -88,7 +87,7 @@ export const Minesweeper = function(appId) {
       appElement.append(headingElement, gameBoard)
       appElement.append(initializeSourceLink())
     }
-    generateGrid()
+    generateGrid(true)
   }
 
   function initializeSourceLink() {
@@ -122,7 +121,7 @@ export const Minesweeper = function(appId) {
 
     const resetButton = document.createElement('button')
     resetButton.innerText = 'Reset'
-    resetButton.onmousedown = () => location.reload()
+    resetButton.onmousedown = () => generateGrid()
     footBar.append(resetButton)
 
     let levelsDropdown = document.createElement('select')
@@ -189,11 +188,11 @@ export const Minesweeper = function(appId) {
   function updateSetting(key) {
     setting = levels[key]
     storageService.saveToLocal('setting', setting)
-    generateGrid()
+    generateGrid(true)
   }
 
 
-  function generateGrid() {
+  function generateGrid(initial = false) {
     firstClick = true
     grid.innerHTML = ''
     grid.oncontextmenu = () => false
@@ -226,9 +225,8 @@ export const Minesweeper = function(appId) {
       appElement.style.margin = '0 auto'
     }
 
-    if (!CASUAL_MODE) {
+    if (initial)
       initializeLeaderBoard()
-    }
 
     timerService.initialize(timerDisplay)
     updateFlagsCountDisplay()

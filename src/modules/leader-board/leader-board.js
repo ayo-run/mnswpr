@@ -13,7 +13,6 @@ export class LeaderBoardService {
   timerService = new TimerService()
   loggerService = new LoggerService()
   user = new UserService()
-  previousLevel
 
   /**
      * 
@@ -55,18 +54,15 @@ export class LeaderBoardService {
   async update(level, title) {
     const displayElement = document.createElement('div')
 
-    if (level !== this.previousLevel) {
-      this.previousLevel = level
-      this.lastPlace = Number.MAX_SAFE_INTEGER
+    this.lastPlace = Number.MAX_SAFE_INTEGER
 
-      const q = query(
-        collection(this.store, 'mw-leaders', level, 'games'),
-        orderBy('time'),
-        limit(10)
-      )
-      this.topListSnapshot = await getDocs(q)
-      this.renderList(displayElement, title, this.topListSnapshot.docs)
-    }
+    const q = query(
+      collection(this.store, 'mw-leaders', level, 'games'),
+      orderBy('time'),
+      limit(10)
+    )
+    this.topListSnapshot = await getDocs(q)
+    this.renderList(displayElement, title, this.topListSnapshot.docs)
 
     return displayElement
   }
