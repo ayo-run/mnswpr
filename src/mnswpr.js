@@ -105,11 +105,19 @@ export const Minesweeper = function(appId) {
 
   async function initializeLeaderBoard() {
     const title = `Best Times (${setting.name})`
+
+    // remove existing leaderboard
+    const previousLeaderBoard = document.getElementById('leaderboard')
+    const parent = previousLeaderBoard?.parentNode
+    if (previousLeaderBoard)
+      parent?.removeChild(previousLeaderBoard)
+
     let loading = document.createElement('div')
     loadingService.addLoading(loading)
     appElement?.append(loading)
 
     const leaderBoard = await leaderBoardService.update(setting.id ?? setting.name, title)
+    leaderBoard.id = 'leaderboard'
     appElement?.replaceChild(leaderBoard, loading)
   }
 
@@ -227,6 +235,11 @@ export const Minesweeper = function(appId) {
     return toolbar
   }
 
+  /**
+   * Updates the game level
+   * @param {String} key 
+   * @param {String} custom 
+   */
   function updateSetting(key, custom) {
     if (key === 'custom') {
       insertCustomOptions()
