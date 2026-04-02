@@ -16,12 +16,16 @@ const MOBILE_BUSY_DELAY = 250;
 const PC_BUSY_DELAY = 500;
 const CASUAL_MODE = false;
 
+/**
+ * Create Minesweeper game board
+ * @param {String} appId 
+ */
 export const Minesweeper = function(appId) {
     const _this = this;
     const storageService = new StorageService();
     const timerService = new TimerService();
     const loggerService = new LoggerService();
-    const leaderBoard = new LeaderBoardService('mw-leaders', 'mw-all', 'mw-config');
+    const leaderBoard = new LeaderBoardService();
 
     let grid = document.createElement('table');
     grid.setAttribute('id', 'grid');
