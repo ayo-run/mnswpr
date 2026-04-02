@@ -1,7 +1,7 @@
-import './minesweeper.css'
 import './modules/loading/loading.css'
 import '../public/favicon.ico'
-import Minesweeper from './minesweeper.js'
+import './mnswpr.css'
+import Minesweeper from './mnswpr.js'
 
 const myMinesweeper = new Minesweeper('app')
 myMinesweeper.initialize()
