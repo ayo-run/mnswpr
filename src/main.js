@@ -1,4 +1,4 @@
-import './index.css'
+import './minesweeper.css'
 import './modules/loading/loading.css'
 import '../public/favicon.ico'
 import Minesweeper from './minesweeper.js'
