@@ -1,13 +1,18 @@
-# Play Minesweeper Online
+# Play Minesweeper Online for Free
 [![Netlify Status](https://api.netlify.com/api/v1/badges/172478bd-afc5-4e47-95ba-d9ab814248fb/deploy-status)](https://app.netlify.com/sites/mnswpr/deploys)
 
 Play it here: [mnswpr.com](https://mnswpr.com). This is the classic game **Minesweeper** built with vanilla web technologies (i.e., no framework dependency).
 
 Technology Stack:
 - HTML, JS, and CSS
-- Vite for bundling
 - Firebase for leader board store
 - Netlify for hosting
+
+Development tooling:
+- [Vite](https://vite.dev/) for bundling
+- [Eslint](https://eslint.org) for JS linting & [CSS linting](https://eslint.org/blog/2025/02/eslint-css-support/)
+- [ESLint Stylistic](https://eslint.style) for JS formatting
+- [Husky](https://typicode.github.io/husky/) for git hooks
 
 ## Project motivation
 One day, while working in my home office, I heard loud and fast mouse clicks coming from our bedroom. It's my wife, playing her favorite game (Minesweeper) on a crappy website full of advertisements.
