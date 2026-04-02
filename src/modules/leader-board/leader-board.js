@@ -1,6 +1,5 @@
 import { TimerService } from '../timer/timer'
 import { UserService } from '../user/user'
-import { LoadingService } from '../loading/loading'
 import { LoggerService } from '../logger/logger'
 
 import { initializeApp } from 'firebase/app'
@@ -12,7 +11,6 @@ import {
 export class LeaderBoardService {
 
   timerService = new TimerService()
-  loadingService = new LoadingService()
   loggerService = new LoggerService()
   user = new UserService()
   previousLevel
@@ -54,10 +52,10 @@ export class LeaderBoardService {
     return this._store
   }
 
-  async update(level, displayElement, title) {
+  async update(level, title) {
+    const displayElement = document.createElement('div')
 
     if (level !== this.previousLevel) {
-      this.loadingService.addLoading(displayElement)
       this.previousLevel = level
       this.lastPlace = Number.MAX_SAFE_INTEGER
 
@@ -70,6 +68,7 @@ export class LeaderBoardService {
       this.renderList(displayElement, title, this.topListSnapshot.docs)
     }
 
+    return displayElement
   }
 
   renderList(displayElement, title, docs) {

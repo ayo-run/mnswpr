@@ -3,6 +3,7 @@
 import {
   LeaderBoardService,
   LoggerService,
+  LoadingService,
   StorageService,
   TimerService
 } from './modules/index.js'
@@ -25,7 +26,8 @@ export const Minesweeper = function(appId) {
   const storageService = new StorageService()
   const timerService = new TimerService()
   const loggerService = new LoggerService()
-  const leaderBoard = new LeaderBoardService()
+  const leaderBoardService = new LeaderBoardService()
+  const loadingService = new LoadingService()
 
   let grid = document.createElement('table')
   grid.setAttribute('id', 'grid')
@@ -41,7 +43,6 @@ export const Minesweeper = function(appId) {
     appElement = document.createElement('div')
     body.append(appElement)
   }
-  let leaderWrapper = document.createElement('div')
 
   let isMobile = false
   let isLeft = false
@@ -102,12 +103,14 @@ export const Minesweeper = function(appId) {
     return sourceLink
   }
 
-  function initializeLeaderBoard() {
+  async function initializeLeaderBoard() {
     const title = `Best Times (${setting.name})`
-    leaderBoard.update(setting.id ?? setting.name, leaderWrapper, title)
+    let loading = document.createElement('div')
+    loadingService.addLoading(loading)
+    appElement?.append(loading)
 
-    if(appElement)
-      appElement.append(leaderWrapper)
+    const leaderBoard = await leaderBoardService.update(setting.id ?? setting.name, title)
+    appElement?.replaceChild(leaderBoard, loading)
   }
 
   function initializeFootbar() {
@@ -538,7 +541,7 @@ export const Minesweeper = function(appId) {
     }
 
     if (!TEST_MODE) {
-      leaderBoard.send(game, 'time')
+      leaderBoardService.send(game, 'time')
     }
 
   }
