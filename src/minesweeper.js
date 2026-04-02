@@ -8,8 +8,10 @@ import {
 } from './modules';
 import { levels } from './levels.js';
 
+import * as pkg from '../package.json'
+
 const TEST_MODE = false; // set to true if you want to test the game with visual hints and separate leaderboard
-const VERSION = "0.3.13";
+const VERSION = pkg.version;
 const MOBILE_BUSY_DELAY = 250;
 const PC_BUSY_DELAY = 500;
 const CASUAL_MODE = false;
