@@ -80,7 +80,7 @@ export const Minesweeper = function(appId) {
     const headingElement = document.createElement('h1')
     const gameBoard = document.createElement('div')
 
-    headingElement.innerText = `Minesweeper v${VERSION}`
+    headingElement.innerHTML = `<span>Minesweeper</span><sup>v${VERSION}</sup>`
     gameBoard.setAttribute('id', 'game-board')
     gameBoard.append(initializeToolbar(), grid, initializeFootbar())
     if(appElement) {
@@ -270,8 +270,8 @@ export const Minesweeper = function(appId) {
     grid.setAttributeNode(gameStatus)
 
     if (appElement) {
-      appElement.style.minWidth = '260px'
-      appElement.style.width = `${grid.offsetWidth + 40}px`
+      // appElement.style.minWidth = '260px'
+      // appElement.style.width = `${grid.offsetWidth + 40}px`
       appElement.style.margin = '0 auto'
     }
 
