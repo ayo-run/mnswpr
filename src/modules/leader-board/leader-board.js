@@ -38,7 +38,6 @@ export class LeaderBoardService {
             appId: "1:113827947104:web:b176f746d8358302c51905",
             measurementId: "G-LZRDY0TG46"
         };
-        console.log('Initializing firebase app...');
         const app = initializeApp(config);
         this._store = getFirestore(app);
 
@@ -46,7 +45,6 @@ export class LeaderBoardService {
         getDoc(configRef)
             .then(res => {
                 this.configuration = res.data()
-                console.log('Received config', this.configuration)
             })
     }
 
@@ -57,7 +55,6 @@ export class LeaderBoardService {
     async update(level, displayElement, title) {
 
         if (level !== this.previousLevel) {
-            console.log('updating leaderboard...')
             this.loadingService.addLoading(displayElement);
             this.previousLevel = level;
             this.lastPlace = Number.MAX_SAFE_INTEGER;
@@ -111,7 +108,7 @@ export class LeaderBoardService {
                     nameElement.style.cursor = 'pointer';
                     nameElement.style.fontWeight = 'bold';
                     nameElement.style.fontStyle = 'italic';
-                    nameElement.onmousedown = () => console.log(game.data());
+                    // nameElement.onmousedown = () => console.log(game.data());
 
                     const indexElement = document.createElement('div');
                     indexElement.innerText = `#${i++}`;
@@ -143,11 +140,9 @@ export class LeaderBoardService {
         data[gameId] = game;
     
         const sessionRef = doc(this.store, 'mw-all', this.user.browserId, 'games', sessionId)
-        console.log('adding a session in mw-all...', data)
         await setDoc(sessionRef, data, {merge: true})
 
         if (this.configuration && game.status === this.configuration.passingStatus && game[key] < this.lastPlace) {
-            console.log('setting score...', data)
             let name = window.prompt(this.configuration.message);
             if (!name) {
                 name = 'Anonymous';
