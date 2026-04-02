@@ -1,5 +1,5 @@
 // forked from https://github.com/elk-zone/elk/blob/main/scripts/release.ts
-import {simpleGit, } from 'simple-git'
+import {simpleGit } from 'simple-git'
 
 const git = simpleGit()
 const hash = await git.revparse(['main'])
