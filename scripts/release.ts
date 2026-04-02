@@ -21,3 +21,9 @@ await git.checkout('main')
 
 console.log('Deleting local release branch')
 await git.branch(['-D', 'release'])
+
+// TODO: handle multiple remotes with a data structure
+console.log('Push tags')
+await git.push(['--tags'])
+await git.push(['--tags', 'gh'])
+await git.push(['--tags', 'sh'])
