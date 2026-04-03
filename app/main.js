@@ -1,5 +1,7 @@
-import mnswpr from '../lib/mnswpr.js'
-import * as pkg from '../package.json'
+import mnswpr from '@ayo-run/mnswpr/mnswpr.js'
+import '@ayo-run/mnswpr/mnswpr.css'
+import * as pkg from '@ayo-run/mnswpr/package.json'
+import { LoadingService } from '../utils/'
 
 const version = import.meta.env.MODE === 'development'
   ? 'dev'
@@ -10,3 +12,12 @@ const game = new mnswpr('app', version, {
   gameDone: (game) => console.log('[hook]: game done', game)
 })
 game.initialize()
+
+const loadingService = new LoadingService()
+const loadingWrapper = document.createElement('div')
+loadingWrapper.id = 'loading-wrapper'
+loadingService.addLoading(loadingWrapper)
+
+const appElement = document.getElementById('app')
+appElement.append(loadingWrapper)
+

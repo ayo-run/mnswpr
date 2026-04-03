@@ -1,0 +1,11 @@
+{
+  "name": "app",
+  "version": "0.0.1",
+  "description": "the mnswpr.com web app",
+  "private": true,
+  "main": "main.js",
+  "devDependencies": {
+    "@ayo-run/mnswpr": "workspace:*"
+  },
+  "author": "Ayo Ayco"
+}

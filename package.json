@@ -1,14 +1,14 @@
 {
-  "name": "@ayo-run/mnswpr",
-  "version": "0.4.26",
+  "name": "monorepo",
+  "version": "0.0.1",
+  "private": true,
   "description": "Classic Minesweeper browser game",
-  "author": "Ayo",
+  "author": "Ayo Ayco",
   "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/ayo-run/mnswpr"
   },
-  "main": "dist/mnswpr.js",
   "scripts": {
     "test": "echo \"Warn: no test specified\"",
     "dev": "vite app",
@@ -23,20 +23,6 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
-  "exports": {
-    ".": {
-      "default": "./lib/dist/mnswpr.js"
-    },
-    "./*": {
-      "default":"./lib/dist/*"
-    }
-  },
-  "files": [
-    "lib/dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "license": "BSD-2-Clause",
   "devDependencies": {
     "@eslint/css": "^1.1.0",
     "@eslint/js": "^10.0.1",
@@ -47,5 +33,6 @@
     "husky": "^9.1.7",
     "simple-git": "^3.33.0",
     "vite": "^8.0.3"
-  }
+  },
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
 }

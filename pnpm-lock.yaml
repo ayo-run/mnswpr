@@ -36,6 +36,14 @@ importers:
         specifier: ^8.0.3
         version: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(jiti@2.6.1)(yaml@2.8.3)
 
+  app:
+    devDependencies:
+      '@ayo-run/mnswpr':
+        specifier: workspace:*
+        version: link:../lib
+
+  lib: {}
+
 packages:
 
   '@emnapi/core@1.9.2':
