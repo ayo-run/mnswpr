@@ -102,7 +102,12 @@ Using your favorite text editor, create a file named `index.html` with the follo
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Minesweeper Game</title>
-    <script type="module" src="main.js"></script>
+    <style>
+        html, body {
+            background-color: black;
+            color: white;
+        }
+    </style>
 </head>
 <body>
     <h1>My Minesweeper Game</h1>
