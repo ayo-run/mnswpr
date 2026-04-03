@@ -17,7 +17,7 @@ const PC_BUSY_DELAY = 500
  * @param {String} appId 
  * @param {String} version
  */
-export const Minesweeper = function(appId, version) {
+const Minesweeper = function(appId, version) {
   const _this = this
   const storageService = new StorageService()
   const timerService = new TimerService()
