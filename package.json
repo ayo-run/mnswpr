@@ -19,6 +19,11 @@
     "lint:fix": "eslint . --fix",
     "release": "bumpp && node scripts/release.js"
   },
+  "exports": {
+    ".": {
+      "default": "./dist/mnswpr.js"
+    }
+  },
   "files": [
     "dist",
     "README.md",
