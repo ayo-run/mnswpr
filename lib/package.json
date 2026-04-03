@@ -9,7 +9,7 @@
     "url": "https://github.com/ayo-run/mnswpr"
   },
   "scripts": {
-    "release": "bumpp && node ../scripts/release.js && npm publish",
+    "release": "bumpp && node ../scripts/release.js",
     "build:release": "npm run build:lib && npm run release"
   },
   "main": "mnswpr.js",

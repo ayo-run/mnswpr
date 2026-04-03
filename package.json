@@ -16,9 +16,8 @@
     "build": "vite build app",
     "preview": "vite preview app",
     "build:preview": "npm run build && npm run preview",
-    "build:lib": "vite build lib",
-    "release": "bumpp && node scripts/release.js && npm publish",
-    "build:release": "npm run build:lib && npm run release",
+    "build:lib": "vite build lib --config vite-lib.config.js",
+    "release": "pnpm run build:lib && pnpm -F @ayo-run/mnswpr release",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
