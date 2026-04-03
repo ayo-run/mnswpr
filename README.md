@@ -23,7 +23,7 @@ As of now the tooling I use are:
 - [Husky](https://typicode.github.io/husky/) for git hooks
 
 ## Development
-To start development, you need node. I highly recommend `pnpm` to be used as well. Once you know you have this, you can do the following:
+To start development, you need [`node`](https://nodejs.org/en/download). I highly recommend [`pnpm`](https://pnpm.io/installation) to be used as well. Once you know you have this, you can do the following:
 1. Install dependencies: `pnpm i`
 2. Start the dev server: `pnpm run dev`
 
