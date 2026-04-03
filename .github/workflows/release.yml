@@ -16,6 +16,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set pnpm
+        uses: pnpm/action-setup
+
       - name: Set node
         uses: actions/setup-node@v6
         with:
@@ -25,6 +28,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       
-      - run: npm ci
-      - run: npm test
+      - run: pnpm install
+      - run: pnpm build
       - run: npm publish --ignore-scripts
