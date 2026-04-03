@@ -1,6 +1,6 @@
 {
   "name": "@ayo-run/mnswpr",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Classic Minesweeper browser game",
   "author": "Ayo",
   "type": "module",
