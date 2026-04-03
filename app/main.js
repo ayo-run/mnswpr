@@ -7,6 +7,6 @@ const version = import.meta.env.MODE === 'development'
 
 const game = new mnswpr('app', version, {
   levelChanged: () => console.log('[hook]: level reset'),
-  gameDone: (game) => console.log('[hook] game done', game)
+  gameDone: (game) => console.log('[hook]: game done', game)
 })
 game.initialize()
