@@ -1,57 +1,147 @@
-# Play Minesweeper Online for Free
-[![Netlify Status](https://api.netlify.com/api/v1/badges/172478bd-afc5-4e47-95ba-d9ab814248fb/deploy-status)](https://app.netlify.com/sites/mnswpr/deploys)
+# Build your own web browser game with `mnswpr` 
 
-Play it here: [mnswpr.com](https://mnswpr.com). This is the classic game **Minesweeper** built with vanilla web technologies (i.e., no framework dependency).
+Have you ever wondered how games on a web browser are built? Believe it or not, anything you see on a web browser can be built by anyone. That's why the web is so great: it is free and open for everyone to enjoy!
 
-Technology Stack: HTML, JS, and CSS; [Google Firebase](https://firebase.google.com) for leader board store; [Netlify](https://netlify.com) for hosting
+In this guide, we will use **mnswpr** as a simple building block for you to build your own browser game. I will walk you through the steps to create your own Minesweeper browser game from scratch.
 
-## Usage
+First, let's go through the requirements.
 
-The web is a wonderful, free, and open platform to create and distribute value. You can use **mnswpr** in different ways:
+## Requirements
 
-- as a deployed [web app](https://mnswpr.com)
-- as a [library](https://npmx.dev/package/@ayo-run/mnswpr) with `npm i @ayo-run/mnswpr`
-- as a `web component` (coming soon).
+It is assumed that you have some knowledge in HTML and JavaScript. You can easily read about this and play around examples online. Some knowledge on using a terminal and a text editor is also required.
 
-## Tooling
-The project has gone through years of existence. It started from 2019 when tooling was massively different. I have [modernized it](https://elk.zone/social.ayco.io/@ayo/116333804543330938) since and have witnessed how much easier and faster it is to build now - even without web frameworks or LLMs!
+You will need a computer with [node.js](https://nodejs.org/en/download).
 
-As of now the tooling I use are:
-- [Vite](https://vite.dev/) for bundling and development server
-- [Eslint](https://eslint.org) for JS linting & [CSS linting](https://eslint.org/blog/2025/02/eslint-css-support/)
-- [ESLint Stylistic](https://eslint.style) for JS formatting
-- [Husky](https://typicode.github.io/husky/) for git hooks
-- [PNPM](https://pnpm.io/installation) for dependency & workspace management
-- and a bunch of automation using scripts and Continuous Integration actions
+If you are familiar with HTML and JavaScript, and has a computer with `node.js` installed... let's now start with the project setup!
 
-## Development
-To start development, you need [`node`](https://nodejs.org/en/download). I highly recommend [`pnpm`](https://pnpm.io/installation) to be used as well. Once you know you have this, you can do the following:
-1. Install dependencies: `pnpm i`
-2. Start the dev server: `pnpm run dev`
+## Project Setup
 
-## You just want to play?
+Open the terminal and confirm that you have `node.js`.
 
-*👉 The live site is here: [mnswpr.com](https://mnswpr.com)*
+```bash
+# verify the node.js version
+node --version # Should print the version
+```
+Next, create a directory where we'll write some code for your game.
 
-## Background
-One day, while working in my home office, I heard loud and fast mouse clicks coming from our bedroom. It's my wife, playing her favorite game (Minesweeper) on a crappy website full of advertisements.
+```bash
+# on mac or linux
+mkdir my-game
 
-I can't allow this, it's a security issue. 🤣
+cd my-game
+```
+Once your terminal is in the new directory `my-game`, we will initialize the JavaScript project using the Node Package Manager or `npm`. Type the following on your terminal:
 
-But it is also an opportunity.
+```bash
+npm init
+```
 
-I wanted to give her the same game, with a similar leader board she can dominate. And this is also a chance for me to dig deeper into vanilla JS.
+This will start the `npm` initialization interface, which will ask you some questions. You can think of what you want to answer, but if you want to go with the defaults, you can just press the `Enter` key repeatedly for each until the questions are done.
 
-Can I make a page with complex interactions (more on this later) without any library dependency?
+The last question will ask you if everything is OK:
 
-## What I have learned:
-1. JS is awesome ✨
-1. We don't always necessarily *need* JS frameworks (or TS) ✨
-1. Even subtle UI changes *can improve* user gameplay experience ✨
-1. There's more ways to break you're app than you are initially aware of ✨
-1. Competition motivates users to use your app more ✨
-1.  Hash in bundled filenames help issues in browser caching (when shipping versions fast) ✨
+```bash
+Is this OK? (yes)
 
+# Don't be shy, you can just press ENTER again
+```
+
+Next, we will add `vite` as a development tool for bundling and as a development server.
+
+<details>
+<summary>Additional info on Vite...</summary>
+Making web pages work in different browsers often brings challenges brought about by differences in technological implementations and limitations. Vite helps us so that our code will work in different environments without us worrying about issues in compatibility and performance. </details><br />
+
+```bash
+npm i -D vite
+```
+
+Now that the JS project is initialized and we have a development environment with `vite`, we will install **mnswpr** as a dependency:
+
+```bash
+npm i @ayo-run/mnswpr
+```
+
+Finally, you can run the installed `vite` dev server by running the following:
+
+```bash
+# `npx` here is the execute command for npm
+npx vite # will run the vite dev server
+```
+
+Vite will now show the address you can type to your browser to see your project. It will show something like this:
+
+```bash
+  VITE v8.0.3  ready in 128 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+```
+
+You can then open the "Local" address (e.g., http://localhost:5173) on your browser.
+
+Congratulations. You now have your project setup! It's time to write some code.
+
+## Write Some Code
+
+Believe it or not, you have done the hard part. Now we start the fun part: putting the parts of your game together!
+
+There are mainly 3 kinds of code that work together in a web page: HTML, JavaScript or JS, and Cascading Style Sheets or CSS.
+
+In this guide, we work mostly with HTML & JS to focus on the basics.
+
+### The HTML
+
+Using your favorite text editor, create a file named `index.html` with the following content:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Minesweeper Game</title>
+    <script type="module" src="main.js"></script>
+</head>
+<body>
+    <h1>My Minesweeper Game</h1>
+    <div id="app"></div>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
+```
+
+<details>
+    <summary>Additional info on `index.html`</summary>
+    The file name `index.html` is important. It is the default file that Web browsers look for in any given path/directory as the web page it will show.
+</details>
+<br />
+
+If you have your browser opened to the Local address `vite` just showed earlier, you should see your very first web page with a title **My Minesweeper Game**
+
+Exciting right? You can try editing the text inside `<h1>...</h1>` to see the web page change as well. :)
+
+Take a second to read through the content of your `index.html`. The `<div>` element there with `id="app"` attribute will be where the game board will be rendered.
+
+Now we just need JavaScript to do this. You will find the `<script>` tag that has the `src="main.js"` attribute, which means the web page is ready to load that JavaScript... but this file doesn't exist yet. So let's write the code for that.
+
+### The JavaScript
+
+Create a new file named `main.js` with the following content:
+
+```js
+/**
+ * main.js
+ */
+import '@ayo-run/mnswpr/mnswpr.css'
+import mnswpr from '@ayo-run/mnswpr'
+
+const game = new mnswpr('app')
+game.initialize()
+```
+
+When you create this `main.js` file, the dev server will instantly update the web page for you and you should now see your minesweeper browser game!
 
 
 ---
