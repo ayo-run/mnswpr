@@ -11,9 +11,31 @@
     <link rel="shortcut icon" type="image/png" href="/favicon.ico" />
     <link rel="stylesheet" href="./main.css" />
     <link rel="stylesheet" href="../utils/loading/loading.css" />
+    <style>
+        :host, :root{
+            --mnswpr-transition: 10s ease-in-out;
+        }
+
+        nav {
+            a {
+                color: white;
+                text-decoration-color: orange;
+                transition: 500ms ease-in-out;
+
+                &:hover {
+                    text-decoration-thickness: 2px;
+                }
+            }
+        }
+    </style>
 </head>
 <body>
     <div id="body-wrapper">
+        <nav>
+            <a target="_blank" href="https://npmx.dev/package/@ayo-run/mnswpr">npm</a>
+            &middot;
+            <a target="_blank" href="https://github.com/ayo-run/mnswpr">github</a>
+        </nav>
         <div id="app">
             Please use Chrome or Firefox.
         </div>
