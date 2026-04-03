@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(import.meta.dirname, 'src/mnswpr.js'),
+      entry: resolve(import.meta.dirname, 'lib/mnswpr.js'),
       name: 'mnswpr',
       fileName: 'mnswpr'
     }

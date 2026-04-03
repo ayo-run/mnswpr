@@ -1,5 +1,4 @@
-import './mnswpr.css'
-import MineSweeper from './mnswpr.js'
+import MineSweeper from './lib/mnswpr.js'
 
 const mnswpr = new MineSweeper('app', 'pkg-dev')
 mnswpr.initialize()
