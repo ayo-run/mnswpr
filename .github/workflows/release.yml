@@ -24,3 +24,7 @@ jobs:
       - run: npx changelogithub
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      
+      - run: npm ci
+      - run: npm test
+      - run: npm publish --ignore-scripts
