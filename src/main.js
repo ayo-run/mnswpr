@@ -1,5 +1,4 @@
-import './modules/loading/loading.css'
-import './mnswpr.css'
-import Minesweeper from './mnswpr.js'
+import MineSweeper from './mnswpr.js'
 
-export default Minesweeper
+const mnswpr = new MineSweeper('app', 'dev')
+mnswpr.initialize()

@@ -21,8 +21,7 @@ export default defineConfig([
       'css/no-empty-blocks': 'error',
       'css/no-invalid-at-rules': 'error',
       'css/no-invalid-properties': 'error'
-    },
-    ignores: ['./src/modules/loading/loading.css']
+    }
   },
   {
     files: ['**/*.{js,mjs,cjs}'],
