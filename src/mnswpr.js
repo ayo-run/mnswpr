@@ -1,32 +1,26 @@
 // @ts-check
 
 import {
-  LeaderBoardService,
   LoggerService,
-  LoadingService,
   StorageService,
   TimerService
 } from './modules/index.js'
 import { levels } from './levels.js'
 
-import * as pkg from '../package.json'
-
-const TEST_MODE = false // set to true if you want to test the game with visual hints and separate leaderboard
-const VERSION = import.meta.env.MODE === 'development' ? 'dev' : `v${pkg.version}`
+const TEST_MODE = false // set to true if you want to test the game with visual hints
 const MOBILE_BUSY_DELAY = 250
 const PC_BUSY_DELAY = 500
 
 /**
  * Create Minesweeper game board
  * @param {String} appId 
+ * @param {String} version
  */
-export const Minesweeper = function(appId) {
+export const Minesweeper = function(appId, version) {
   const _this = this
   const storageService = new StorageService()
   const timerService = new TimerService()
   const loggerService = new LoggerService()
-  const leaderBoardService = new LeaderBoardService()
-  const loadingService = new LoadingService()
 
   let grid = document.createElement('table')
   grid.setAttribute('id', 'grid')
@@ -78,8 +72,8 @@ export const Minesweeper = function(appId) {
     const headingElement = document.createElement('h1')
     const gameBoard = document.createElement('div')
 
-    headingElement.innerHTML = `<span>Minesweeper</span><sup>${VERSION}</sup>`
-    document.title = `mnswpr [${VERSION}]`
+    headingElement.innerHTML = `<span>Minesweeper</span><sup>${version}</sup>`
+    document.title = `mnswpr [${version}]`
     gameBoard.setAttribute('id', 'game-board')
     gameBoard.append(initializeToolbar(), grid, initializeFootbar())
     if(appElement) {
@@ -87,7 +81,7 @@ export const Minesweeper = function(appId) {
       appElement.append(headingElement, gameBoard)
       appElement.append(initializeSourceLink())
     }
-    generateGrid(true)
+    generateGrid()
   }
 
   function initializeSourceLink() {
@@ -98,22 +92,6 @@ export const Minesweeper = function(appId) {
     sourceLink.style.color = 'white'
 
     return sourceLink
-  }
-
-  async function initializeLeaderBoard() {
-    const title = `Best Times (${setting.name})`
-
-    const previousLeaderBoard = document.getElementById('leaderboard')
-    let loading = document.createElement('div')
-    loadingService.addLoading(loading)
-    if (previousLeaderBoard)
-      appElement?.replaceChild(loading, previousLeaderBoard)
-    else
-      appElement?.append(loading)
-
-    const leaderBoard = await leaderBoardService.update(setting.id ?? setting.name, title)
-    leaderBoard.id = 'leaderboard'
-    appElement?.replaceChild(leaderBoard, loading)
   }
 
   function initializeFootbar() {
@@ -188,11 +166,11 @@ export const Minesweeper = function(appId) {
   function updateSetting(key) {
     setting = levels[key]
     storageService.saveToLocal('setting', setting)
-    generateGrid(true)
+    generateGrid()
   }
 
 
-  function generateGrid(initial = false) {
+  function generateGrid() {
     firstClick = true
     grid.innerHTML = ''
     grid.oncontextmenu = () => false
@@ -225,8 +203,12 @@ export const Minesweeper = function(appId) {
       appElement.style.margin = '0 auto'
     }
 
-    if (initial)
-      initializeLeaderBoard()
+    /**
+     * TODO: add hook afterGridGenerated
+     *   - for initializing the leaderboard
+     */
+    console.log('[hook]: after grid generated')
+
 
     timerService.initialize(timerDisplay)
     updateFlagsCountDisplay()
@@ -488,9 +470,11 @@ export const Minesweeper = function(appId) {
       isMobile
     }
 
-    if (!TEST_MODE) {
-      leaderBoardService.send(game, 'time')
-    }
+    /**
+     * TODO: add hook after gameSession send back `game`
+     *   - for sending the game score to the db
+     */
+    console.log('[hook]: after game session', game)
 
   }
 

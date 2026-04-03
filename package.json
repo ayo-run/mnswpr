@@ -1,8 +1,9 @@
 {
-  "name": "@ayco/mnswpr",
-  "version": "0.4.14",
+  "name": "@ayo-run/mnswpr",
+  "version": "0.0.1",
+  "private": true,
   "description": "Classic Minesweeper browser game",
-  "author": "Ayo Ayco",
+  "author": "Ayo",
   "type": "module",
   "repository": {
     "type": "git",
@@ -14,22 +15,22 @@
     "dev": "vite",
     "start": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "build:preview": "npm run build && npm run preview",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "release": "bumpp && node scripts/release.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "license": "BSD-2-Clause",
-  "dependencies": {
-    "firebase": "^12.11.0"
-  },
   "devDependencies": {
     "@eslint/css": "^1.1.0",
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
     "bumpp": "^11.0.1",
+    "esbuild": "^0.28.0",
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
     "husky": "^9.1.7",
