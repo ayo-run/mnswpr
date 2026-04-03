@@ -3,18 +3,35 @@
 
 Play it here: [mnswpr.com](https://mnswpr.com). This is the classic game **Minesweeper** built with vanilla web technologies (i.e., no framework dependency).
 
-Technology Stack:
-- HTML, JS, and CSS
-- Firebase for leader board store
-- Netlify for hosting
+Technology Stack: HTML, JS, and CSS; [Google Firebase](https://firebase.google.com) for leader board store; [Netlify](https://netlify.com) for hosting
 
-Development tooling:
+## Usage
+
+The web is a wonderful, free, and open platform to create and distribute value. You can use **mnswpr** in different ways:
+
+- as a deployed [web app](https://mnswpr.com)
+- as a [library](https://npmx.dev/package/@ayo-run/mnswpr) with `npm i @ayo-run/mnswpr`
+- as a `web component` (coming soon).
+
+## Tooling
+The project has gone through years of existence. It started from 2019 when tooling was massively different. I have [modernized it](https://elk.zone/social.ayco.io/@ayo/116333804543330938) since and have witnessed how much easier and faster it is to build now - even without web frameworks or LLMs!
+
+As of now the tooling I use are:
 - [Vite](https://vite.dev/) for bundling and development server
 - [Eslint](https://eslint.org) for JS linting & [CSS linting](https://eslint.org/blog/2025/02/eslint-css-support/)
 - [ESLint Stylistic](https://eslint.style) for JS formatting
 - [Husky](https://typicode.github.io/husky/) for git hooks
 
-## Project motivation
+## Development
+To start development, you need node. I highly recommend `pnpm` to be used as well. Once you know you have this, you can do the following:
+1. Install dependencies: `pnpm i`
+2. Start the dev server: `pnpm run dev`
+
+## You just want to play?
+
+*👉 The live site is here: [mnswpr.com](https://mnswpr.com)*
+
+## Background
 One day, while working in my home office, I heard loud and fast mouse clicks coming from our bedroom. It's my wife, playing her favorite game (Minesweeper) on a crappy website full of advertisements.
 
 I can't allow this, it's a security issue. 🤣
@@ -33,10 +50,9 @@ Can I make a page with complex interactions (more on this later) without any lib
 1. Competition motivates users to use your app more ✨
 1.  Hash in bundled filenames help issues in browser caching (when shipping versions fast) ✨
 
-## Development
-To start development, you need node v16 (the dev server doesn't work on v18 *yet*). Once you know you have this, you can do the following:
-1. Install dependencies: `npm i`
-2. Start the dev server: `npm run dev`
 
-## Live Demo
-*👉 The live site is here: [Minesweeper](https://mnswpr.com)*
+
+---
+
+_Just keep building._<br>
+_A project by [Ayo](https://ayo.ayco.io)_
