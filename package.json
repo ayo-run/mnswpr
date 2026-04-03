@@ -22,6 +22,9 @@
   "exports": {
     ".": {
       "default": "./dist/mnswpr.js"
+    },
+    "./*": {
+      "default":"./dist/*"
     }
   },
   "files": [
