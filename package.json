@@ -9,6 +9,7 @@
     "type": "git",
     "url": "https://github.com/ayo-run/mnswpr"
   },
+  "homepage": "https://mnswpr.com",
   "scripts": {
     "test": "echo \"Warn: no test specified\"",
     "dev": "vite app",

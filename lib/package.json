@@ -8,6 +8,7 @@
     "type": "git",
     "url": "https://github.com/ayo-run/mnswpr"
   },
+  "homepage": "https://mnswpr.com",
   "scripts": {
     "publish": "npm publish",
     "release": "bumpp && node ../scripts/release.js"
