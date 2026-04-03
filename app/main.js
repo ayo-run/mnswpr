@@ -5,6 +5,7 @@ import { LoadingService } from '../utils/'
 import { LeaderBoardService } from './modules/leader-board/leader-board.js'
 
 const leaderBoardService = new LeaderBoardService()
+const loadingService = new LoadingService()
 
 const version = import.meta.env.MODE === 'development'
   ? 'dev'
@@ -12,7 +13,6 @@ const version = import.meta.env.MODE === 'development'
 
 const initializeGameBoard = async (level) => {
   const prevousLeaderBoard = document.getElementById('leaderboard')
-  const loadingService = new LoadingService()
   const loadingWrapper = document.createElement('div')
   loadingWrapper.id = 'loading-wrapper'
   loadingService.addLoading(loadingWrapper)
@@ -38,5 +38,5 @@ const game = new mnswpr('app', version, {
   levelChanged: (level) => initializeGameBoard(level),
   gameDone: (game) => sendGameResult(game)
 })
-game.initialize()
 
+game.initialize()
