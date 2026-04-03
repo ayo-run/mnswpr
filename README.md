@@ -21,6 +21,8 @@ As of now the tooling I use are:
 - [Eslint](https://eslint.org) for JS linting & [CSS linting](https://eslint.org/blog/2025/02/eslint-css-support/)
 - [ESLint Stylistic](https://eslint.style) for JS formatting
 - [Husky](https://typicode.github.io/husky/) for git hooks
+- [PNPM](https://pnpm.io/installation) for dependency & workspace management
+- and a bunch of automation using scripts and Continuous Integration actions
 
 ## Development
 To start development, you need [`node`](https://nodejs.org/en/download). I highly recommend [`pnpm`](https://pnpm.io/installation) to be used as well. Once you know you have this, you can do the following:
