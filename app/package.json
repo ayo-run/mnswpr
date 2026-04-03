@@ -4,6 +4,11 @@
   "description": "the mnswpr.com web app",
   "private": true,
   "main": "main.js",
+  "scripts": {
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:preview": "npm run build && npm run preview"
+  },
   "devDependencies": {
     "@ayo-run/mnswpr": "workspace:*",
     "firebase": "^12.11.0"
