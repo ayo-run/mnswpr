@@ -4,6 +4,8 @@ Have you ever wondered how games on a web browser are built? Believe it or not, 
 
 In this guide, we will use **mnswpr** as a simple building block for you to build your own browser game. I will walk you through the steps to create your own Minesweeper browser game from scratch.
 
+If you want to skip to the ending, all the code are in this repository: [minimal-mnswpr](https://github.com/ayo-run/minimal-mnswpr)
+
 First, let's go through the requirements.
 
 ## Requirements
