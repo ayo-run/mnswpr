@@ -15,7 +15,7 @@
     "dev": "vite app",
     "start": "vite app",
     "build:preview": "pnpm -F app run build:preview",
-    "build:lib": "vite build lib --config vite-lib.config.js",
+    "build:lib": "vite build lib",
     "release:lib": "pnpm -F @ayo-run/mnswpr run release",
     "publish:lib": "cd lib && npm publish",
     "prepare": "husky",
