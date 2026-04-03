@@ -6,7 +6,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ayoayco/mnswpr"
+    "url": "https://github.com/ayo-run/mnswpr"
   },
   "main": "dist/mnswpr.js",
   "scripts": {
