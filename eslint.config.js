@@ -49,5 +49,5 @@ export default defineConfig([
       }]
     }
   },
-  globalIgnores(['dist'])
+  globalIgnores(['dist', '_site'])
 ])
