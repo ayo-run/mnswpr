@@ -1,5 +1,5 @@
-import MineSweeper from './lib/mnswpr.js'
-import * as pkg from './package.json'
+import MineSweeper from '../lib/mnswpr.js'
+import * as pkg from '../package.json'
 
 const version = import.meta.env.MODE === 'development'
   ? 'dev'

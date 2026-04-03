@@ -11,27 +11,28 @@
   "main": "dist/mnswpr.js",
   "scripts": {
     "test": "echo \"Warn: no test specified\"",
-    "dev": "vite",
-    "start": "vite",
-    "build": "vite build",
-    "build:site": "vite build --config vite-site.config.js",
-    "preview:site": "vite preview --config vite-site.config.js",
-    "build:preview": "npm run build:site && npm run preview:site",
+    "dev": "vite app",
+    "start": "vite app",
+    "build": "vite build app",
+    "preview": "vite preview app",
+    "build:preview": "npm run build && npm run preview",
+    "build:lib": "vite build lib",
+    "release": "bumpp && node scripts/release.js && npm publish",
+    "build:release": "npm run build:lib && npm run release",
     "prepare": "husky",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "release": "bumpp && node scripts/release.js && npm publish"
+    "lint:fix": "eslint . --fix"
   },
   "exports": {
     ".": {
-      "default": "./dist/mnswpr.js"
+      "default": "./lib/dist/mnswpr.js"
     },
     "./*": {
-      "default":"./dist/*"
+      "default":"./lib/dist/*"
     }
   },
   "files": [
-    "dist",
+    "lib/dist",
     "README.md",
     "LICENSE"
   ],
