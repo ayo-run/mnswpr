@@ -1,6 +1,5 @@
 // @ts-check
 
-import './mnswpr.css'
 import {
   LoggerService,
   StorageService,

@@ -17,7 +17,7 @@
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "release": "bumpp && node scripts/release.js"
+    "release": "bumpp && node scripts/release.js && npm publish"
   },
   "exports": {
     ".": {
