@@ -17,6 +17,7 @@
     "build:preview": "pnpm -F app run build:preview",
     "build:lib": "vite build lib --config vite-lib.config.js",
     "release": "pnpm -F @ayo-run/mnswpr release",
+    "publish": "pnpm -F @ayo-run/mnswpr publish",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
