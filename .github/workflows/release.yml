@@ -11,6 +11,11 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
       - uses: actions/checkout@v6
         with:
@@ -24,6 +29,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
+          registry-url: 'https://registry.npmjs.org'
 
       - run: npx changelogithub
         env:
@@ -31,4 +37,6 @@ jobs:
       
       - run: pnpm install
       - run: pnpm build
-      - run: npm publish --ignore-scripts
+      - run: npm publish --ignore-scripts --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

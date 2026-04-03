@@ -1,7 +1,6 @@
 {
   "name": "@ayo-run/mnswpr",
   "version": "0.0.5",
-  "private": true,
   "description": "Classic Minesweeper browser game",
   "author": "Ayo",
   "type": "module",
@@ -9,7 +8,7 @@
     "type": "git",
     "url": "https://github.com/ayoayco/mnswpr"
   },
-  "main": "src/index.js",
+  "main": "dist/mnswpr.js",
   "scripts": {
     "test": "echo \"Warn: no test specified\"",
     "dev": "vite",
@@ -22,7 +21,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "license": "BSD-2-Clause",
   "devDependencies": {
