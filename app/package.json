@@ -5,7 +5,8 @@
   "private": true,
   "main": "main.js",
   "devDependencies": {
-    "@ayo-run/mnswpr": "workspace:*"
+    "@ayo-run/mnswpr": "workspace:*",
+    "firebase": "^12.11.0"
   },
   "author": "Ayo Ayco"
 }
