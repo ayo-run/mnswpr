@@ -11,7 +11,7 @@
   "homepage": "https://mnswpr.com",
   "scripts": {
     "publish": "npm publish",
-    "release": "bumpp && node ../scripts/release.js && npm publish"
+    "release": "bumpp && node ../scripts/release.js"
   },
   "main": "mnswpr.js",
   "exports": {
