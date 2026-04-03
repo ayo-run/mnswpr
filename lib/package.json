@@ -10,8 +10,7 @@
   },
   "scripts": {
     "publish": "npm publish",
-    "release": "bumpp && node ../scripts/release.js && publish",
-    "build:release": "npm run build:lib && npm run release"
+    "release": "bumpp && node ../scripts/release.js && publish"
   },
   "main": "mnswpr.js",
   "exports": {
