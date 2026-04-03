@@ -1,12 +1,16 @@
 {
   "name": "@ayo-run/mnswpr",
-  "version": "0.4.26",
+  "version": "0.4.27",
   "description": "Classic Minesweeper browser game",
   "author": "Ayo",
   "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/ayo-run/mnswpr"
+  },
+  "scripts": {
+    "release": "bumpp && node ../scripts/release.js && npm publish",
+    "build:release": "npm run build:lib && npm run release"
   },
   "main": "mnswpr.js",
   "exports": {
