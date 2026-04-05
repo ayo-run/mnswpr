@@ -14,10 +14,11 @@
     "test": "echo \"Warn: no test specified\"",
     "dev": "vite app",
     "start": "vite app",
-    "build:preview": "pnpm -F app run build:preview",
+    "build": "vite build app",
     "build:lib": "vite build lib",
     "release:lib": "pnpm -F @ayo-run/mnswpr run release",
     "publish:lib": "cd lib && npm publish",
+    "build:preview": "pnpm -F app run build:preview",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
