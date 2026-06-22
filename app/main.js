@@ -13,20 +13,23 @@ const version = import.meta.env.MODE === 'development'
 
 const initializeGameBoard = async (level) => {
   const prevousLeaderBoard = document.getElementById('leaderboard')
+  const prevousLoadingWrapper = document.getElementById('loading-wrapper')
+  prevousLoadingWrapper?.remove()
   const loadingWrapper = document.createElement('div')
   loadingWrapper.id = 'loading-wrapper'
   loadingService.addLoading(loadingWrapper)
 
   const appElement = document.getElementById('app')
+
   if (prevousLeaderBoard){
     const parent = prevousLeaderBoard.parentNode
     parent.replaceChild(loadingWrapper, prevousLeaderBoard)
   }else{
     appElement.append(loadingWrapper)
   }
+
   const leaderBoardWrapper = await leaderBoardService.update(level.id, `Best Times (${level.name})`)
   leaderBoardWrapper.id = 'leaderboard'
-
   appElement.replaceChild(leaderBoardWrapper, loadingWrapper)
 }
 
