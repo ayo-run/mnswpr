@@ -1,3 +1,6 @@
 packages:
   - "lib"
   - "app"
+allowBuilds:
+  '@firebase/util': false
+  protobufjs: false
