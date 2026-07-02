@@ -1,11 +1,11 @@
 import { LoggerService } from '../logger/logger'
 
-const INTERVAL = 1
-
 export class TimerService {
 
   constructor() {
     this.loggerService = new LoggerService()
+    this.time = 0
+    this.rendered = undefined
   }
 
   initialize(el) {
@@ -13,33 +13,58 @@ export class TimerService {
 
     this.display = el
     this.startTime = undefined
-    if (this.id) {
+    if (this.id !== undefined) {
       this.stop()
     }
-    this.updateDisplay()
+    this.time = 0
+    this.render()
   }
 
   start() {
     if (this.running || !this.display) return
 
     this.running = true
-    this.startTime = new Date().getTime()
-    this.id = window.setInterval(() => this.updateDisplay(), INTERVAL)
-    this.loggerService.debug(`started timer id: ${this.id}`)
+    this.startTime = Date.now()
+    this.tick()
+    this.loggerService.debug('started timer')
   }
 
   stop() {
     this.running = false
-    clearInterval(this.id)
-    this.loggerService.debug(`stopped timer id: ${this.id}`)
+    if (this.id !== undefined) {
+      window.cancelAnimationFrame(this.id)
+    }
     this.id = undefined
+    this.loggerService.debug('stopped timer')
     return this.time
   }
 
-  updateDisplay() {
-    let currentTime = new Date().getTime() - this.startTime
-    this.time = Math.floor(currentTime / INTERVAL)
-    this.display.innerHTML = this.pretty(this.time) || '0'
+  /**
+   * Recompute the elapsed time and schedule the next frame.
+   * Driven by requestAnimationFrame so it aligns with the browser's paint
+   * cadence and pauses automatically when the tab is hidden — instead of the
+   * old fixed 1ms interval that fired ~1000 times a second.
+   */
+  tick() {
+    this.time = Date.now() - this.startTime
+    this.render()
+    if (this.running) {
+      this.id = window.requestAnimationFrame(() => this.tick())
+    }
+  }
+
+  /**
+   * Write to the DOM only when the visible value actually changes. The display
+   * has 100ms (tenths-of-a-second) resolution, so most frames are a no-op and
+   * cost no reflow.
+   */
+  render() {
+    if (!this.display) return
+    const text = this.pretty(this.time) || '0'
+    if (text !== this.rendered) {
+      this.display.innerHTML = text
+      this.rendered = text
+    }
   }
 
   pretty(duration) {
@@ -60,4 +85,3 @@ export class TimerService {
     return (str === '00') ? '' : `${str}${separator}`
   }
 }
-

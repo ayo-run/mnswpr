@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { TimerService } from '../utils/timer/timer.js'
 
 describe('TimerService.pretty', () => {
@@ -29,5 +29,67 @@ describe('TimerService.clean', () => {
 
   it('appends the separator to a non-zero unit', () => {
     expect(timer.clean('05', ':')).toBe('05:')
+  })
+})
+
+describe('TimerService rendering', () => {
+  let display
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    display = document.createElement('span')
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows 0 before the timer starts', () => {
+    const timer = new TimerService()
+    timer.initialize(display)
+    expect(display.innerHTML).toBe('0')
+  })
+
+  it('drives updates with requestAnimationFrame, not a 1ms interval', () => {
+    const raf = vi.spyOn(window, 'requestAnimationFrame')
+    const interval = vi.spyOn(window, 'setInterval')
+
+    const timer = new TimerService()
+    timer.initialize(display)
+    timer.start()
+
+    expect(raf).toHaveBeenCalled()
+    expect(interval).not.toHaveBeenCalled()
+  })
+
+  it('only touches the DOM when the displayed value changes', () => {
+    const timer = new TimerService()
+    timer.initialize(display)
+    timer.start()
+
+    let writes = 0
+    const span = { set innerHTML(_v) { writes++ } }
+    timer.display = span
+
+    // Same tenth-of-a-second value across frames -> a single DOM write.
+    timer.time = 1500
+    timer.render()
+    timer.render()
+    timer.render()
+    expect(writes).toBe(1)
+
+    // A new value -> one more write.
+    timer.time = 1600
+    timer.render()
+    expect(writes).toBe(2)
+  })
+
+  it('returns the elapsed time in milliseconds from stop()', () => {
+    const timer = new TimerService()
+    timer.initialize(display)
+    timer.start()
+    vi.advanceTimersByTime(2500)
+    timer.tick()
+    expect(timer.stop()).toBe(2500)
   })
 })
