@@ -16,9 +16,11 @@ pnpm build:lib      # build the publishable library -> lib/dist
 pnpm lint           # eslint . (JS + CSS); runs automatically on pre-commit
 pnpm lint:fix       # eslint --fix
 pnpm build:preview  # build the app and serve the production preview
+pnpm test           # run the Vitest suite once (jsdom)
+pnpm test:watch     # run Vitest in watch mode
 ```
 
-There is **no test suite** (`pnpm test` is a no-op placeholder). Verify changes by running `pnpm dev` and playing.
+Tests live in `test/` and run under **Vitest** with a jsdom environment (config in `vitest.config.js`). They cover the shared utils and drive the engine through real DOM events (mount `#app`, dispatch mouse events, assert on cell/grid attributes). For anything visual or input-timing related, also verify by running `pnpm dev` and playing.
 
 Node version: `.nvmrc` pins `lts/*`.
 
