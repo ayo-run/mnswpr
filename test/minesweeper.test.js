@@ -29,13 +29,23 @@ function everyCell(grid, fn) {
 describe('Minesweeper board', () => {
   beforeEach(() => {
     localStorage.clear()
-    // Fake timers stop the 1ms game clock interval from running during tests.
+    // Fake timers stop the requestAnimationFrame game clock from running during tests.
     vi.useFakeTimers()
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
+
+  // Mount a game on a custom board injected via the cached 'setting' localStorage key.
+  function mountCustomGame(setting, hooks) {
+    localStorage.setItem('setting', JSON.stringify(setting))
+    document.body.innerHTML = '<div id="app"></div>'
+    const game = new Minesweeper('app', 'dev', hooks)
+    game.initialize()
+    return document.getElementById('grid')
+  }
 
   it('renders the beginner grid (9x9) by default', () => {
     const grid = mountGame()
@@ -115,5 +125,34 @@ describe('Minesweeper board', () => {
       if (cell.getAttribute('data-status') === 'highlighted') highlighted++
     })
     expect(highlighted).toBe(1)
+  })
+
+  it('declares a win once every safe cell is revealed', () => {
+    // A mine-free 3x3 board: one click cascades to reveal all 9 safe cells.
+    let finished = null
+    const grid = mountCustomGame(
+      { rows: 3, cols: 3, mines: 0, id: 'test', name: 'test' },
+      { levelChanged: () => {}, gameDone: (g) => { finished = g.status } }
+    )
+
+    leftClick(grid.rows[1].cells[1])
+
+    expect(finished).toBe('win')
+    expect(grid.getAttribute('game-status')).toBe('done')
+    everyCell(grid, cell => expect(cell.getAttribute('data-status')).not.toBe('default'))
+  })
+
+  it('does not declare a win until the last safe cell is revealed', () => {
+    // 1x3 board with the single mine pinned to the middle column.
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const grid = mountCustomGame({ rows: 1, cols: 3, mines: 1, id: 'test', name: 'test' })
+
+    // First safe cell: adjacent to the mine, shows "1", no cascade -> not yet won.
+    leftClick(grid.rows[0].cells[0])
+    expect(grid.getAttribute('game-status')).toBe('active')
+
+    // Revealing the remaining safe cell completes the board.
+    leftClick(grid.rows[0].cells[2])
+    expect(grid.getAttribute('game-status')).toBe('done')
   })
 })
