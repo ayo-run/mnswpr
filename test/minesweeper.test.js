@@ -155,4 +155,25 @@ describe('Minesweeper board', () => {
     leftClick(grid.rows[0].cells[2])
     expect(grid.getAttribute('game-status')).toBe('done')
   })
+
+  it('flood fill stops at a flagged cell and never reveals it', () => {
+    // 1x4 board with the mine pinned to the last column.
+    vi.spyOn(Math, 'random').mockReturnValue(0.99)
+    const grid = mountCustomGame({ rows: 1, cols: 4, mines: 1, id: 'test', name: 'test' })
+
+    // Flag a safe cell sitting between the blank region and the mine.
+    // (full press + release so the internal right-button flag resets)
+    const flag = grid.rows[0].cells[2]
+    flag.dispatchEvent(new MouseEvent('mousedown', { button: 2, bubbles: true }))
+    flag.dispatchEvent(new MouseEvent('mouseup', { button: 2, bubbles: true }))
+    expect(flag.getAttribute('data-status')).toBe('flagged')
+
+    // Click the far blank cell; the cascade must stop at the flag.
+    leftClick(grid.rows[0].cells[0])
+
+    expect(grid.rows[0].cells[0].getAttribute('data-status')).toBe('empty')
+    expect(flag.getAttribute('data-status')).toBe('flagged')
+    // A safe cell is still hidden (behind the flag), so it is not a win.
+    expect(grid.getAttribute('game-status')).toBe('active')
+  })
 })
