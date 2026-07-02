@@ -127,6 +127,19 @@ describe('Minesweeper board', () => {
     expect(highlighted).toBe(1)
   })
 
+  it('fires afterGridGenerated with the setting once the board is built', () => {
+    const settings = []
+    const setting = { rows: 4, cols: 5, mines: 3, id: 'test', name: 'test' }
+    mountCustomGame(setting, {
+      levelChanged: () => {},
+      gameDone: () => {},
+      afterGridGenerated: (s) => settings.push(s)
+    })
+
+    expect(settings.length).toBe(1)
+    expect(settings[0]).toMatchObject({ rows: 4, cols: 5, mines: 3, id: 'test' })
+  })
+
   it('declares a win once every safe cell is revealed', () => {
     // A mine-free 3x3 board: one click cascades to reveal all 9 safe cells.
     let finished = null
