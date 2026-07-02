@@ -24,6 +24,8 @@ As of now the tooling I use are:
 - [PNPM](https://pnpm.io/installation) for dependency & workspace management
 - and a bunch of automation using scripts and Continuous Integration actions
 
+Because a big part of this project's purpose is to track how the software development industry evolves — and because it has come a long way in modernizing along the way — I now also use it as a **playground for coding agents**. It's a small, framework-free, well-scoped codebase, which makes it a great sandbox to see how AI agents read, reason about, and change real code. To help them get their bearings quickly, the repo ships an [`AGENTS.md`](./AGENTS.md) describing the architecture and conventions.
+
 ## Development
 To start development, you need [`node`](https://nodejs.org/en/download). I highly recommend [`pnpm`](https://pnpm.io/installation) to be used as well. Once you know you have this, you can do the following:
 1. Install dependencies: `pnpm i`
