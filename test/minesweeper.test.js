@@ -89,4 +89,31 @@ describe('Minesweeper board', () => {
     expect(grid.getAttribute('game-status')).toBe('inactive')
     everyCell(grid, cell => expect(cell.getAttribute('data-status')).toBe('default'))
   })
+
+  it('highlights the pressed cell and clears it when the press moves away', () => {
+    const grid = mountGame()
+    const a = grid.rows[5].cells[5]
+    const b = grid.rows[5].cells[6]
+    const c = grid.rows[5].cells[7]
+
+    // Press-and-hold left on A -> A highlighted.
+    a.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }))
+    expect(a.getAttribute('data-status')).toBe('highlighted')
+
+    // Drag the held press across B then C. Each move must clear the previous
+    // highlight and leave no stale ones behind.
+    b.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
+    c.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
+
+    expect(a.getAttribute('data-status')).toBe('default')
+    expect(b.getAttribute('data-status')).toBe('default')
+    expect(c.getAttribute('data-status')).toBe('highlighted')
+
+    // Exactly one cell should remain highlighted across the whole grid.
+    let highlighted = 0
+    everyCell(grid, cell => {
+      if (cell.getAttribute('data-status') === 'highlighted') highlighted++
+    })
+    expect(highlighted).toBe(1)
+  })
 })
