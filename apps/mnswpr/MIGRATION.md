@@ -1,8 +1,10 @@
-# 🧹 AYO — Leaderboard Migration Checklist
+# 🧹 Leaderboard Migration Checklist
 
-Manual steps to finish the leaderboard rollout. **All code changes are already
-applied** in the working tree — these are the external actions on Firebase and
-Netlify that have to be done by hand.
+Manual steps to finish the leaderboard rollout for **mnswpr**. **All code changes
+are already applied** in the working tree — these are the external actions on
+Firebase and Netlify that have to be done by hand.
+
+> All commands below run from this app directory (`apps/mnswpr`) unless noted.
 
 > One project (`secure-moment-188701`), one difference between environments: the
 > **collection namespace**. Production uses `mw-*`, dev/test uses `mw-test-*`.
@@ -12,7 +14,7 @@ Netlify that have to be done by hand.
 
 ## ✅ Step 1 — Deploy Firestore rules + indexes
 
-From the repo root:
+From this app directory (`apps/mnswpr`):
 
 ```bash
 npx firebase login
@@ -32,7 +34,7 @@ In the Netlify site settings, add:
 
 | Variable | Value |
 | --- | --- |
-| `VITE_FIREBASE_API_KEY` … (all 8) | **same as [`app/.env.development`](app/.env.development)** (same project) |
+| `VITE_FIREBASE_API_KEY` … (all 8) | **same as [`.env.development`](.env.development)** (same project) |
 | `VITE_LB_NAMESPACE` | **`mw`** ← makes production use the `mw-*` collections |
 
 > Local dev already uses `mw-test` via the committed `.env.development` — nothing
@@ -53,10 +55,11 @@ wins in test.
 > returns `permission-denied`. (No indexes to wait on — the windows use
 > automatic single-field indexes.)
 
-Populate the dev boards so they aren't empty while developing:
+Populate the dev boards so they aren't empty while developing, from this app
+directory (`apps/mnswpr`):
 
 ```bash
-(cd app && node ../scripts/seed-dev-scores.js)
+node scripts/seed-dev-scores.js
 ```
 
 - Uses [`scripts/seed-dev-scores.js`](scripts/seed-dev-scores.js) — ~12 sample
@@ -67,9 +70,10 @@ Populate the dev boards so they aren't empty while developing:
 
 > 💡 **Local dev uses the emulator by default — this cloud seed is optional.**
 > `pnpm dev` points at the local **Firestore emulator** (needs a JDK): run
-> `pnpm emulators` + `pnpm seed:emulator` and you're set — no deploy, no cloud.
-> The cloud seed above is only needed for a hosted/preview environment. To opt
-> out of the emulator, set `VITE_FIRESTORE_EMULATOR=` empty in `app/.env.local`.
+> `pnpm emulators` + `pnpm seed:emulator` from the workspace root and you're set
+> — no deploy, no cloud. The cloud seed above is only needed for a hosted/preview
+> environment. To opt out of the emulator, set `VITE_FIRESTORE_EMULATOR=` empty
+> in `.env.local`.
 > See [`docs/firebase-leaderboards.md`](docs/firebase-leaderboards.md#local-firestore-emulator-default-for-local-dev).
 
 ## ✅ Step 5 — Verify
@@ -86,7 +90,7 @@ Populate the dev boards so they aren't empty while developing:
 
 - **Nothing is committed yet** — all changes are in the working tree.
 - **`scripts/export-legends.js`** still hard-codes the (dev = prod) Firebase keys
-  from the one-off Legends export. It's identical to `app/.env.development`; can
+  from the one-off Legends export. It's identical to `.env.development`; can
   be de-duped to read from the env file on request.
-- **Legends** is already frozen into static HTML ([`app/legends.html`](app/legends.html))
+- **Legends** is already frozen into static HTML ([`legends.html`](legends.html))
   — no action needed.
