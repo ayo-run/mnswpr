@@ -13,4 +13,5 @@ const libDir = resolve(root, 'lib')
 console.log('Copying root README.md into lib/ for the published package')
 copyFileSync(resolve(root, 'README.md'), resolve(libDir, 'README.md'))
 
+execSync('npm login')
 execSync('npm publish', { cwd: libDir, stdio: 'inherit' })
