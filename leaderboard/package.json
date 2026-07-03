@@ -1,0 +1,39 @@
+{
+  "name": "@cozy-games/leaderboard",
+  "version": "0.0.1",
+  "description": "Generic, game-agnostic Firestore leaderboard with time-windowed views",
+  "author": "Ayo Ayco",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayo-run/mnswpr"
+  },
+  "main": "leader-board.js",
+  "exports": {
+    ".": {
+      "default": "./dist/leader-board.js"
+    },
+    "./dist/*": {
+      "default": "./dist/*"
+    },
+    "./*": {
+      "default": "./*"
+    }
+  },
+  "files": [
+    "./*",
+    "./dist"
+  ],
+  "dependencies": {
+    "web-component-base": "^4.1.2"
+  },
+  "peerDependencies": {
+    "firebase": "^12.11.0"
+  },
+  "peerDependenciesMeta": {
+    "firebase": {
+      "optional": true
+    }
+  },
+  "license": "BSD-2-Clause"
+}

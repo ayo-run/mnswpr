@@ -23,3 +23,23 @@ em {
 #body-wrapper {
   display: inline-block;
 }
+
+#greeting {
+  margin: 10px auto;
+  font-size: 0.95em;
+  color: #DDDDDD;
+}
+
+#legends-link {
+  margin: 20px auto;
+}
+
+#legends-link a {
+  color: #DDDDDD;
+  text-decoration-color: orange;
+  transition: 500ms ease-in-out;
+}
+
+#legends-link a:hover {
+  text-decoration-thickness: 2px;
+}

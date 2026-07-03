@@ -49,5 +49,11 @@ export default defineConfig([
       }]
     }
   },
+  {
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      globals: globals.node
+    }
+  },
   globalIgnores(['**/dist'])
 ])

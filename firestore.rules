@@ -1,0 +1,79 @@
+rules_version = '2'
+
+// Security rules for the mnswpr leaderboard. Firestore is schemaless, so these
+// rules are the enforced schema: public reads for the boards, validated
+// create-only writes for scores, no client writes to server config.
+//
+// SECURITY MODEL: the Firebase web config is public (it ships to every browser),
+// so these rules — not secrecy of the config or the codebase — are what protect
+// the data. No collection allows a client to UPDATE or DELETE existing docs, so
+// no client (with or without the source) can wipe the production boards. The
+// powerful vectors (Admin SDK / service-account keys, and IAM console access)
+// bypass rules entirely — keep those out of the repo and locked down in GCP.
+// See docs/firebase-leaderboards.md ("Protecting production data").
+//
+// Rules match by namespace SUFFIX (regex) rather than a literal prefix, so the
+// same set covers production (`mw-*`) and test (`mw-test-*`) collections in the
+// one project — and any future namespace. Firestore ORs all matching rules, and
+// `{ns}-scores`, `{ns}-all` and `{ns}-leaders` share a 4-segment shape, so each
+// block is guarded by a regex on the captured collection name.
+//
+// Deploy with (see docs/firebase-leaderboards.md):
+//   npx firebase deploy --only firestore:rules --project prod
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Ranked, time-windowed scores — public read, validated create-only.
+    match /{scores}/{category}/games/{game} {
+      allow read:   if scores.matches('mw(-[a-z]+)?-scores');
+      allow create: if scores.matches('mw(-[a-z]+)?-scores') && isValidScore(category);
+      allow update, delete: if false;
+    }
+
+    // Legacy all-time collection, frozen into the static Legends page — read-only.
+    match /{leaders}/{category}/games/{game} {
+      allow read:  if leaders.matches('mw(-[a-z]+)?-leaders');
+      allow write: if false;
+    }
+
+    // Per-browser personal archive. Write-only from the client (the app never
+    // reads it back), append/merge only, and NEVER deletable. This is the only
+    // client-writable collection, so denying delete/read here removes the last
+    // way a client could destroy or harvest data.
+    match /{all}/{browserId}/games/{session} {
+      allow read:           if false;
+      allow create, update: if all.matches('mw(-[a-z]+)?-all');
+      allow delete:         if false;
+    }
+
+    // Server config (passingStatus, message) — public read, no client write.
+    match /{config}/{document} {
+      allow read:  if config.matches('mw(-[a-z]+)?-config');
+      allow write: if false;
+    }
+
+    // Defense-in-depth: deny anything not matched above. Firestore already
+    // default-denies unmatched paths; this makes the intent explicit and is a
+    // backstop if a future rule is added carelessly. (Allows are OR-ed, so this
+    // never revokes the specific grants above.)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // A well-formed score: numeric score, bounded name, string bucket keys, and
+    // a category matching the path. Rules have no clock, so they can't verify
+    // the buckets are correctly derived from time_stamp — that stays the client's
+    // job. Extra fields (playerId, time_stamp, meta) are allowed.
+    function isValidScore(category) {
+      let d = request.resource.data;
+      return d.score is number
+        && d.score >= 0
+        && d.category == category
+        && d.name is string
+        && d.name.size() <= 24
+        && d.day is string
+        && d.week is string
+        && d.month is string;
+    }
+  }
+}

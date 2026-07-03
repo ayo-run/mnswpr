@@ -15,6 +15,8 @@
     "test:watch": "vitest",
     "dev": "vite app",
     "start": "vite app",
+    "emulators": "npx -y firebase-tools emulators:start --only firestore",
+    "seed:emulator": "cd app && FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node ../scripts/seed-dev-scores.js",
     "build": "vite build app",
     "build:lib": "vite build lib",
     "publish:lib": "node scripts/publish-lib.js",

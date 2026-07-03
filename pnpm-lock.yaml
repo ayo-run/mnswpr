@@ -47,9 +47,24 @@ importers:
       '@ayo-run/mnswpr':
         specifier: workspace:*
         version: link:../lib
+      '@cozy-games/leaderboard':
+        specifier: workspace:*
+        version: link:../leaderboard
       firebase:
         specifier: ^12.11.0
         version: 12.11.0
+      web-component-base:
+        specifier: ^4.1.2
+        version: 4.1.2
+
+  leaderboard:
+    dependencies:
+      firebase:
+        specifier: ^12.11.0
+        version: 12.11.0
+      web-component-base:
+        specifier: ^4.1.2
+        version: 4.1.2
 
   lib: {}
 
@@ -1298,6 +1313,9 @@ packages:
   w3c-xmlserializer@5.0.0:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
     engines: {node: '>=18'}
+
+  web-component-base@4.1.2:
+    resolution: {integrity: sha512-Jti4FHgCcwtsFWJ+PPwFNhTm5AJVIHrTXDew0rk2Y3b8EChRIE5xr6fmUni43tOhc6w8HatvR3k+qnxjXr/7Mw==}
 
   web-vitals@4.2.4:
     resolution: {integrity: sha512-r4DIlprAGwJ7YM11VZp4R884m0Vmgr6EAKe3P+kO0PPj3Unqyvv59rczf6UiGcb9Z8QxZVcqKNwv/g0WNdWwsw==}
@@ -2635,6 +2653,8 @@ snapshots:
   w3c-xmlserializer@5.0.0:
     dependencies:
       xml-name-validator: 5.0.0
+
+  web-component-base@4.1.2: {}
 
   web-vitals@4.2.4: {}
 

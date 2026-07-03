@@ -1,0 +1,5 @@
+{
+  "comment": "Time windows are rolling (time_stamp >= cutoff) and all-time sorts by score — both use Firestore's automatic single-field indexes, so no composite indexes are required.",
+  "indexes": [],
+  "fieldOverrides": []
+}

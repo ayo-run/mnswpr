@@ -11,7 +11,9 @@
   },
   "devDependencies": {
     "@ayo-run/mnswpr": "workspace:*",
-    "firebase": "^12.11.0"
+    "@cozy-games/leaderboard": "workspace:*",
+    "firebase": "^12.11.0",
+    "web-component-base": "^4.1.2"
   },
   "author": "Ayo Ayco"
 }

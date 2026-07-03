@@ -1,6 +1,8 @@
 packages:
   - "lib"
   - "app"
+  - "leaderboard"
 allowBuilds:
   '@firebase/util': false
   protobufjs: false
+  web-component-base: false

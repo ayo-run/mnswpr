@@ -64,6 +64,22 @@ pnpm build       # build the website
 pnpm build:lib   # build the publishable library
 ```
 
+### Leaderboard (local Firestore emulator)
+
+The leader board is backed by [Google Firestore](https://firebase.google.com). For local development the app talks to the **Firestore emulator** by default — fully local, no cloud, no deploy. The flag `VITE_FIRESTORE_EMULATOR=1` is already set in `app/.env.development`.
+
+You need a **JDK 21+** installed (the emulator runs on Java; `firebase-tools` itself is fetched on demand via `npx`). Then, in two terminals:
+
+```bash
+pnpm emulators      # terminal 1 — start the Firestore emulator on :8080 (+ UI)
+pnpm seed:emulator  # terminal 2, once — fill it with sample scores
+pnpm dev            # terminal 2 — run the app against the emulator
+```
+
+If the emulator isn't running, the board simply shows *"unavailable"* (a refused connection). To skip the emulator — for quick UI-only work, or if you don't have a JDK — set `VITE_FIRESTORE_EMULATOR=` (empty) in a local, gitignored `app/.env.local`; the app then uses the cloud `mw-test` namespace instead.
+
+See [`docs/firebase-leaderboards.md`](./docs/firebase-leaderboards.md) for the full data model, security rules, environments, and deployment.
+
 ## Contributing
 
 Contributions are welcome! See [`AGENTS.md`](./AGENTS.md) for the architecture, conventions, and release workflow before opening a pull request.

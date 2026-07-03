@@ -6,5 +6,19 @@ lib/README.md
 
 .claude
 
-*.*~
-*.*swp
+# Production / local Firebase config values are not committed — set them as
+# Netlify env vars, or keep them in a local, gitignored env file. Dev values
+# live in the committed app/.env.development (public, non-secret keys).
+.env.production
+.env.local
+.env.*.local
+
+# Firebase emulator artifacts
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.emulator-data/
+
+*~
+*swo
+*swp

@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "secure-moment-188701",
+    "prod": "secure-moment-188701",
+    "dev": "secure-moment-188701"
+  }
+}
