@@ -1,9 +1,9 @@
-# Play Minesweeper Online for Free
-[![Netlify Status](https://api.netlify.com/api/v1/badges/172478bd-afc5-4e47-95ba-d9ab814248fb/deploy-status)](https://app.netlify.com/sites/mnswpr/deploys)
-
 > [!IMPORTANT]
 > **mnswpr has a new home.** Development now happens in the **Cozy Games** monorepo:
 > **[git.ayo.run/ayo/cozy-games](https://git.ayo.run/ayo/cozy-games)**.
+
+# Play Minesweeper Online for Free
+[![Netlify Status](https://api.netlify.com/api/v1/badges/172478bd-afc5-4e47-95ba-d9ab814248fb/deploy-status)](https://app.netlify.com/sites/mnswpr/deploys)
 
 Play it here: [mnswpr.com](https://mnswpr.com). This is the classic game **Minesweeper** built with vanilla web technologies (i.e., no framework dependency).
 
