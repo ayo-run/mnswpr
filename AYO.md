@@ -82,6 +82,86 @@ Populate the dev boards so they aren't empty while developing:
 
 ---
 
+## 📦 Step 6 — Extract `@cozy-games/leaderboard` into its own `cozy-games` repo
+
+> **Separate, non-blocking migration.** Steps 1–5 finish the leaderboard rollout
+> _inside this monorepo_. This step spins the leaderboard out into a standalone
+> **`cozy-games`** repo so it can become the home for other reusable, game-agnostic
+> components (leaderboard first, then things like achievements, profiles, and a
+> shared score/config schema). The package is already published-shaped
+> (`@cozy-games/leaderboard`, backend-agnostic via adapters) — it just currently
+> lives in [`leaderboard/`](leaderboard) as a `workspace:*` dependency of the app.
+
+### 6.1 — Create the repo
+
+- Create **`ayo-run/cozy-games`** on GitHub (public, `BSD-2-Clause` to match
+  [`leaderboard/package.json`](leaderboard/package.json)).
+- Lay it out as a monorepo so future components sit beside the leaderboard:
+
+  ```
+  cozy-games/
+    packages/
+      leaderboard/      ← moved from mnswpr's leaderboard/
+      <next component>/ ← future: achievements, profiles, …
+    pnpm-workspace.yaml  (packages: ["packages/*"])
+    package.json         (private root, name: "cozy-games")
+  ```
+
+### 6.2 — Move the code (keep history)
+
+From a clone of this repo, extract the `leaderboard/` subtree with its history so
+blame/commits survive the move:
+
+```bash
+# in a throwaway clone of ayo-run/mnswpr
+git subtree split --prefix=leaderboard -b cozy-leaderboard-split
+# then, in the new cozy-games repo:
+git pull <path-to-mnswpr-clone> cozy-leaderboard-split --prefix=packages/leaderboard
+```
+
+- Update `@cozy-games/leaderboard`'s `repository.url` in its
+  [`package.json`](leaderboard/package.json) to point at the new
+  `ayo-run/cozy-games` repo (it currently points at `ayo-run/mnswpr`).
+- Bring the leaderboard docs along:
+  [`leaderboard/README.md`](leaderboard/README.md) +
+  [`leaderboard/CONFIGURATION.md`](leaderboard/CONFIGURATION.md). The Firebase-
+  specific guides ([`docs/firebase-leaderboards.md`](docs/firebase-leaderboards.md),
+  [`docs/leaderboard-env-migration.md`](docs/leaderboard-env-migration.md)) describe
+  **this app's** deployment and stay here.
+
+### 6.3 — Publish to npm
+
+The package builds to `dist/` (`vite build` via
+[`leaderboard/vite.config.js`](leaderboard/vite.config.js), `firebase` externalized).
+From the new repo:
+
+```bash
+(cd packages/leaderboard && pnpm build && npm publish --access public)
+```
+
+- Bump off `0.0.1` for the first real release (e.g. `0.1.0`).
+- `firebase` stays a **peer** dependency (optional) — consumers bring their own,
+  exactly as [`app/main.js`](app/main.js) does today.
+
+### 6.4 — Point mnswpr at the published package
+
+Once `@cozy-games/leaderboard` is on npm:
+
+- In [`app/package.json`](app/package.json), change the dependency from
+  `"@cozy-games/leaderboard": "workspace:*"` to the published range
+  (e.g. `"^0.1.0"`).
+- Remove `"leaderboard"` from [`pnpm-workspace.yaml`](pnpm-workspace.yaml) and
+  delete the [`leaderboard/`](leaderboard) directory from this repo.
+- `pnpm install` to refresh the lockfile, then re-run **Step 5** (win a game on
+  both boards) to confirm the app behaves identically against the published build.
+
+> 💡 No Firestore/Netlify changes here — collections, rules, indexes, and env
+> vars are unchanged. This is purely a **code-ownership** move: the app keeps
+> wiring its own `FirebaseAdapter` + namespace; only the import source changes
+> from a workspace package to a published one.
+
+---
+
 ## 📌 Still open (not blocking)
 
 - **Nothing is committed yet** — all changes are in the working tree.
