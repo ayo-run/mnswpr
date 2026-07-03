@@ -28,19 +28,48 @@ pnpm -F mnswpr run build:preview  # build the app and serve the production previ
 
 ### Infra (local CLI only — no web dashboards)
 
-All infra runs through local CLIs. Each app **owns its infra scripts** in its own `package.json` under generic, tech-agnostic names (`deploy:db`, not `deploy:firestore`) — run them by targeting the app with pnpm's `-F` filter (no root wrapper scripts):
+**Every infra operation — provision, deploy hosting, deploy DB, manage env — is doable from the CLI, and every configuration/schema is codified in-repo.** Nothing lives only in a web dashboard. There are two distinct layers, both owned by the app:
+
+**1. App infra *config* — declarative, committed, deployed state.** These files ARE the source of truth; deploying just pushes them up. For `mnswpr`, all under `apps/mnswpr/`:
+
+| File | Codifies |
+| --- | --- |
+| `firebase.json` | Firestore + emulator wiring (rules/indexes paths, emulator ports) |
+| `.firebaserc` | Firebase project aliases (`default`/`prod`/`dev`) |
+| `firestore.rules` | Firestore security rules (server-side access control) |
+| `firestore.indexes.json` | Firestore indexes (none needed — documented inline) |
+| `netlify.toml` | Netlify hosting: build command, publish dir, redirects, headers, build env |
+| `.env.example` | The full env-var contract; real prod values are set as Netlify env vars via CLI, never committed |
+
+**2. App infra *tools* — the CLIs that act on that config.** They are versioned **devDependencies** of the app (not `npx`-on-demand, not global installs), so `pnpm install` pins them and every machine gets the same version. `mnswpr` depends on `firebase-tools` and `netlify-cli`; its scripts call the `firebase`/`netlify` binaries directly (pnpm puts the app's `node_modules/.bin` on `PATH`). A future app using a different stack (Postgres, a different host) declares *its* CLIs as *its* devDependencies and backs the same generic script names — so `pnpm -F <name> run deploy:db` stays uniform.
+
+Each app **owns its infra scripts** in its own `package.json` under generic, tech-agnostic names (`deploy:db`, not `deploy:firestore`) — run them by targeting the app with pnpm's `-F` filter (no root wrapper scripts):
 
 ```bash
-pnpm -F mnswpr run db:start    # local DB emulator (mnswpr -> Firestore), standalone
+pnpm -F mnswpr run db:start      # local DB emulator (mnswpr -> Firestore), standalone
 pnpm -F mnswpr run db:seed       # seed the running local emulator
 pnpm -F mnswpr run db:stop       # kill a stray/orphaned Firestore emulator holding :8080
 pnpm -F mnswpr run deploy:db     # deploy DB rules/indexes (-> firebase deploy --only firestore)
-pnpm -F mnswpr run deploy:site   # build + deploy hosting (-> netlify deploy --prod)
+pnpm -F mnswpr run deploy:site   # build + deploy hosting (-> netlify deploy --prod --dir=dist)
 ```
 
-Each app defines the same generic script names backed by whatever stack it uses (e.g. Postgres, a different host), so `pnpm -F <name> run deploy:db` is uniform across apps. `deploy:site` requires a one-time `npx netlify-cli login && npx netlify-cli link` per app.
+**One-time per app / per machine (all CLI, no dashboard):**
 
-The Firestore emulator needs **Java** (it's a JVM program). `pnpm install` runs a root `postinstall` (`scripts/ensure-java.mjs`) that installs a user-local Temurin JRE 21 into `~/.local` without `sudo` when `java` is missing — idempotent, non-fatal, and auto-skipped on `CI` / `SKIP_JRE_SETUP` / unsupported platforms.
+```bash
+pnpm -F mnswpr exec firebase login             # auth the Firebase CLI
+pnpm -F mnswpr exec netlify login              # auth the Netlify CLI
+pnpm -F mnswpr exec netlify link               # bind the app dir to its Netlify site (writes .netlify/, gitignored)
+```
+
+**Managing hosting env vars via CLI** (keeps prod Firebase keys + `VITE_LB_NAMESPACE=mw` out of git while still reproducible):
+
+```bash
+pnpm -F mnswpr exec netlify env:set VITE_LB_NAMESPACE mw   # set one var
+pnpm -F mnswpr exec netlify env:import .env.production      # bulk-import from a local (gitignored) env file
+pnpm -F mnswpr exec netlify env:list                       # inspect what's set
+```
+
+**Non-npm tools get a setup script instead of a devDependency.** The Firestore emulator needs **Java** (it's a JVM program), which isn't an npm package — so `pnpm install` runs a root `postinstall` (`scripts/ensure-java.mjs`) that installs a user-local Temurin JRE 21 into `~/.local` without `sudo` when `java` is missing — idempotent, non-fatal, and auto-skipped on `CI` / `SKIP_JRE_SETUP` / unsupported platforms. Any future infra tool that isn't on npm follows the same pattern (a checked-in setup script), never a manual install step.
 
 Tests are co-located with the package they exercise (`packages/utils/test/`, `packages/mnswpr/test/`) and run under **Vitest** with a jsdom environment (root config in `vitest.config.js`). They cover the shared utils and drive the engine through real DOM events (mount `#app`, dispatch mouse events, assert on cell/grid attributes). For anything visual or input-timing related, also verify by running `pnpm -F mnswpr run dev` and playing.
 

@@ -4,5 +4,11 @@ packages:
   - "sites/*"
 allowBuilds:
   '@firebase/util': false
+  '@parcel/watcher': false
+  esbuild: false
+  netlify-cli: false
   protobufjs: false
+  re2: false
+  sharp: false
+  unix-dgram: false
   web-component-base: false

@@ -17,8 +17,8 @@ Firebase and Netlify that have to be done by hand.
 From this app directory (`apps/mnswpr`):
 
 ```bash
-npx firebase login
-npx firebase deploy --only firestore:rules,firestore:indexes --project prod
+pnpm -F mnswpr exec firebase login
+pnpm -F mnswpr exec firebase deploy --only firestore:rules,firestore:indexes --project prod
 ```
 
 - Uses committed [`firestore.rules`](firestore.rules) + [`firestore.indexes.json`](firestore.indexes.json).

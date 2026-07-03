@@ -98,23 +98,26 @@ Dev config lives in the committed [`app/.env.development`](../app/.env.developme
 
 ### One-time CLI setup
 
-The Firebase project already exists — no need to create it.
+`firebase-tools` is a pinned devDependency of this app (installed by `pnpm install`),
+so run it as the `firebase` binary via pnpm — no global install, no `npx`. The
+Firebase project already exists — no need to create it.
 
 ```bash
-npx firebase login
+pnpm -F mnswpr exec firebase login
 ```
 
 ### Deploy rules + indexes
 
-Deploys go to **production** by default. Target a project explicitly with
-`--project`:
+The `deploy:db` script (`pnpm -F mnswpr run deploy:db`) deploys everything under
+`firestore` to the **default** project. To target a specific project or a subset,
+call the CLI directly:
 
 ```bash
 # production (default alias 'prod')
-npx firebase deploy --only firestore:rules,firestore:indexes --project prod
+pnpm -F mnswpr exec firebase deploy --only firestore:rules,firestore:indexes --project prod
 
 # development database
-npx firebase deploy --only firestore:rules,firestore:indexes --project dev
+pnpm -F mnswpr exec firebase deploy --only firestore:rules,firestore:indexes --project dev
 ```
 
 > ⚠️ Deploying **replaces** whatever rules currently live in the Console. The
@@ -133,7 +136,8 @@ locally (so you validate them before deploying). The flag
 `VITE_FIRESTORE_EMULATOR=1` is set in [`app/.env.development`](../app/.env.development).
 
 > Prerequisite: the Firestore emulator is a Java process, so you need a JDK
-> (11+) installed. `firebase-tools` is fetched on demand via `npx`.
+> (11+) installed. `firebase-tools` is a pinned devDependency of this app
+> (installed by `pnpm install`, run as the `firebase` binary).
 
 Everyday dev loop:
 

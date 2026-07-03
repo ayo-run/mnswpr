@@ -45,21 +45,31 @@ pnpm -F mnswpr run preview   # preview its production build
 
 ## Infra (per-app, via local CLI)
 
-Infra runs through local CLIs, never web dashboards. Each app owns its infra scripts
-under generic names (`deploy:db`, `deploy:site`, `db:start`, `db:seed`) — run them by
-targeting the app with pnpm's `-F` filter:
+Every infra operation runs through local CLIs — never web dashboards — and every
+config/schema is codified in-repo. Two layers, both owned by the app:
+
+- **Config** (declarative, committed state): for `mnswpr`, `firebase.json`, `.firebaserc`,
+  `firestore.rules`, `firestore.indexes.json`, `netlify.toml`, and `.env.example`.
+- **Tools** (the CLIs acting on that config): versioned **devDependencies** of the app
+  (`firebase-tools`, `netlify-cli`) — installed by `pnpm install`, not `npx`/global.
+
+Each app owns its infra scripts under generic names — run them by targeting the app
+with pnpm's `-F` filter:
 
 ```bash
 pnpm -F mnswpr run db:start    # start the local DB emulator (Firestore) — needs Java, see app README
 pnpm -F mnswpr run db:seed       # seed the running emulator with dev data
 pnpm -F mnswpr run db:stop       # kill a stray emulator left holding :8080
 pnpm -F mnswpr run deploy:db     # deploy DB rules/indexes  (firebase deploy --only firestore)
-pnpm -F mnswpr run deploy:site   # build + deploy hosting   (netlify deploy --prod)
+pnpm -F mnswpr run deploy:site   # build + deploy hosting   (netlify deploy --prod --dir=dist)
 ```
 
 Apps are named `<name>`, so a future app uses the same command shape
-(`pnpm -F <name> run deploy:db`), backed by whatever stack that app uses.
-`deploy:site` needs a one-time `npx netlify-cli login && npx netlify-cli link` per app.
+(`pnpm -F <name> run deploy:db`), backed by whatever stack (and CLIs) that app declares.
+One-time per app: `pnpm -F mnswpr exec firebase login`, and
+`pnpm -F mnswpr exec netlify login && pnpm -F mnswpr exec netlify link`. Manage prod
+hosting env vars via CLI too (e.g. `netlify env:set` / `netlify env:import`). See
+[AGENTS.md](AGENTS.md) for the full infra reference.
 
 See [apps/mnswpr/README.md](apps/mnswpr/README.md) for the game itself, and each package's
 README for library usage.
