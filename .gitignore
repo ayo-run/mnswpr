@@ -1,14 +1,14 @@
 node_modules/
 dist/
 
-# generated at publish time from the root README.md (see scripts/publish-lib.js)
-lib/README.md
+# generated at publish time from apps/mnswpr/README.md (see scripts/publish-lib.js)
+packages/mnswpr/README.md
 
 .claude
 
 # Production / local Firebase config values are not committed — set them as
 # Netlify env vars, or keep them in a local, gitignored env file. Dev values
-# live in the committed app/.env.development (public, non-secret keys).
+# live in the committed apps/mnswpr/.env.development (public, non-secret keys).
 .env.production
 .env.local
 .env.*.local

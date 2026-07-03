@@ -27,6 +27,9 @@
   "dependencies": {
     "web-component-base": "^4.1.2"
   },
+  "devDependencies": {
+    "@cozy-games/utils": "workspace:*"
+  },
   "peerDependencies": {
     "firebase": "^12.11.0"
   },

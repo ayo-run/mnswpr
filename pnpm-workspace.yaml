@@ -1,7 +1,7 @@
 packages:
-  - "lib"
-  - "app"
-  - "leaderboard"
+  - "apps/*"
+  - "packages/*"
+  - "sites/*"
 allowBuilds:
   '@firebase/util': false
   protobufjs: false

@@ -1,0 +1,22 @@
+{
+  "name": "@cozy-games/utils",
+  "version": "0.0.1",
+  "description": "Shared, dependency-free browser utilities for Cozy Games (storage, timer, logger, loading, date buckets)",
+  "author": "Ayo Ayco",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayo-run/mnswpr"
+  },
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "default": "./index.js"
+    },
+    "./*": {
+      "default": "./*"
+    }
+  },
+  "license": "BSD-2-Clause"
+}

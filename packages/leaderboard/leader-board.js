@@ -1,4 +1,4 @@
-import { buckets } from '../utils/date-bucket/date-bucket.js'
+import { buckets } from '@cozy-games/utils/date-bucket/date-bucket.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 

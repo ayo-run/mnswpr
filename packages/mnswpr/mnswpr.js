@@ -9,7 +9,7 @@ import {
   LoggerService,
   StorageService,
   TimerService
-} from '../utils/index.js'
+} from '@cozy-games/utils'
 import { levels } from './levels.js'
 
 const TEST_MODE = false // set to true if you want to test the game with visual hints

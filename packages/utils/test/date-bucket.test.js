@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dayKey, weekKey, monthKey, buckets } from '../utils/date-bucket/date-bucket.js'
+import { dayKey, weekKey, monthKey, buckets } from '@cozy-games/utils/date-bucket/date-bucket.js'
 
 describe('date-bucket', () => {
   it('builds a zero-padded UTC day key', () => {
