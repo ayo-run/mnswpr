@@ -4,7 +4,7 @@
 Play it here: [mnswpr.com](https://mnswpr.com). This is the classic game **Minesweeper** built with vanilla web technologies (i.e., no framework dependency).
 
 <!-- TODO: replace with the actual screenshot/GIF once supplied (confirm final path/filename) -->
-![mnswpr gameplay](app/public/screenshot.png)
+![mnswpr gameplay](./screenshot.png)
 
 Technology Stack: HTML, JS, and CSS; [Google Firebase](https://firebase.google.com) for leader board store; [Netlify](https://netlify.com) for hosting
 
