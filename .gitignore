@@ -1,6 +1,9 @@
 node_modules/
 dist/
 
+# generated at publish time from the root README.md (see scripts/publish-lib.js)
+lib/README.md
+
 .claude
 
 *.*~
