@@ -1,12 +1,12 @@
 /**
  * One-time generator: snapshot the all-time leaders from the legacy
- * `mw-leaders/{level}/games` collection and write them into app/legends.html as
+ * `mw-leaders/{level}/games` collection and write them into legends.html as
  * a FULLY-RENDERED, static page — no runtime JS, no Firebase at page load.
  *
  * The data never changes, so the page is a frozen artifact. Re-run only if you
  * ever need to regenerate it. Because `firebase` is an app-workspace dependency,
  * run it so Node can resolve it, e.g. from the app directory:
- *   (cd app && node ../scripts/export-legends.js)
+ *   (cd apps/mnswpr && node scripts/export-legends.js)
  */
 import { writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
@@ -17,9 +17,9 @@ import {
   getFirestore, getDocs, collection, query, orderBy, limit
 } from 'firebase/firestore/lite'
 
-import { levels } from '../lib/levels.js'
+import { levels } from '@ayo-run/mnswpr/levels.js'
 
-// Mirror of TimerService.pretty() (utils/timer/timer.js) — inlined so this
+// Mirror of TimerService.pretty() (@cozy-games/utils timer) — inlined so this
 // generator has no cross-module import chain to resolve under raw Node.
 const clean = (str, separator) => (str === '00' ? '' : `${str}${separator}`)
 const pretty = duration => {
@@ -131,6 +131,6 @@ ${sections.join('\n')}
 `
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const out = resolve(__dirname, '../app/legends.html')
+const out = resolve(__dirname, '../legends.html')
 writeFileSync(out, html)
 console.log(`\nWrote ${out}`)

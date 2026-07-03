@@ -10,9 +10,12 @@
   },
   "homepage": "https://mnswpr.com",
   "scripts": {
-    "release": "bumpp && node ../scripts/release.js"
+    "release": "bumpp && node ../../scripts/release.js"
   },
   "main": "mnswpr.js",
+  "devDependencies": {
+    "@cozy-games/utils": "workspace:*"
+  },
   "exports": {
     ".": {
       "default": "./dist/mnswpr.js"

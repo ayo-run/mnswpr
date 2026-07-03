@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import Minesweeper from '../lib/mnswpr.js'
+import Minesweeper from '../mnswpr.js'
 
 // Build a fresh board mounted on #app and return its grid <table>.
 function mountGame() {

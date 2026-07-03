@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { TimerService } from '../utils/timer/timer.js'
+import { TimerService } from '@cozy-games/utils/timer/timer.js'
 
 describe('TimerService.pretty', () => {
   const timer = new TimerService()

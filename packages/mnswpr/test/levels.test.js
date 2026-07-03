@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { levels } from '../lib/levels.js'
+import { levels } from '../levels.js'
 
 describe('levels', () => {
   it('defines the four expected difficulty presets', () => {

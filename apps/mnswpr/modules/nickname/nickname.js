@@ -1,4 +1,4 @@
-import { StorageService } from '../../../utils/index.js'
+import { StorageService } from '@cozy-games/utils'
 
 const NICK_KEY = 'nickname'
 const MAX_LENGTH = 24

@@ -42,14 +42,17 @@ importers:
         specifier: ^4.1.9
         version: 4.1.9(@types/node@25.5.2)(jsdom@29.1.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(jiti@2.6.1)(yaml@2.8.3))
 
-  app:
+  apps/mnswpr:
     devDependencies:
       '@ayo-run/mnswpr':
         specifier: workspace:*
-        version: link:../lib
+        version: link:../../packages/mnswpr
       '@cozy-games/leaderboard':
         specifier: workspace:*
-        version: link:../leaderboard
+        version: link:../../packages/leaderboard
+      '@cozy-games/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       firebase:
         specifier: ^12.11.0
         version: 12.11.0
@@ -57,7 +60,7 @@ importers:
         specifier: ^4.1.2
         version: 4.1.2
 
-  leaderboard:
+  packages/leaderboard:
     dependencies:
       firebase:
         specifier: ^12.11.0
@@ -65,8 +68,18 @@ importers:
       web-component-base:
         specifier: ^4.1.2
         version: 4.1.2
+    devDependencies:
+      '@cozy-games/utils':
+        specifier: workspace:*
+        version: link:../utils
 
-  lib: {}
+  packages/mnswpr:
+    devDependencies:
+      '@cozy-games/utils':
+        specifier: workspace:*
+        version: link:../utils
+
+  packages/utils: {}
 
 packages:
 

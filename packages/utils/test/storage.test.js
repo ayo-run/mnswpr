@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { StorageService } from '../utils/storage/storage.js'
+import { StorageService } from '@cozy-games/utils/storage/storage.js'
 
 describe('StorageService', () => {
   let storage
