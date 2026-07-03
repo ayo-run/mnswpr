@@ -3,6 +3,9 @@
 
 Play it here: [mnswpr.com](https://mnswpr.com). This is the classic game **Minesweeper** built with vanilla web technologies (i.e., no framework dependency).
 
+<!-- TODO: replace with the actual screenshot/GIF once supplied (confirm final path/filename) -->
+![mnswpr gameplay](app/public/screenshot.png)
+
 Technology Stack: HTML, JS, and CSS; [Google Firebase](https://firebase.google.com) for leader board store; [Netlify](https://netlify.com) for hosting
 
 ## Usage
@@ -12,6 +15,25 @@ The web is a wonderful, free, and open platform to create and distribute value. 
 - as a deployed [web app](https://mnswpr.com)
 - as a [library](https://npmx.dev/package/@ayo-run/mnswpr) with `npm i @ayo-run/mnswpr`
 - as a `web component` (coming soon).
+
+Using it as a library takes only a few lines — mount it onto any element by `id`:
+
+```js
+import '@ayo-run/mnswpr/mnswpr.css'
+import mnswpr from '@ayo-run/mnswpr'
+
+const game = new mnswpr('app')
+game.initialize()
+```
+
+## How to Play
+
+The goal is to reveal every safe cell without detonating a mine. Your **first click is always safe**.
+
+- **Left click** — reveal a cell
+- **Right click** — flag / unflag a suspected mine
+- **Left + right click together** (chording) — reveal the neighbors of a satisfied number
+- **Touch** — tap to reveal, long-press to flag
 
 ## Tooling
 The project has gone through years of existence. It started from 2019 when tooling was massively different. I have [modernized it](https://elk.zone/social.ayco.io/@ayo/116333804543330938) since and have witnessed how much easier and faster it is to build now - even without web frameworks or LLMs!
@@ -31,6 +53,20 @@ To start development, you need [`node`](https://nodejs.org/en/download). I highl
 1. Install dependencies: `pnpm i`
 2. Start the dev server: `pnpm run dev`
 
+The rest of the everyday commands:
+
+```bash
+pnpm test        # run the Vitest suite
+pnpm lint        # ESLint (JS + CSS)
+pnpm lint:fix    # ESLint with autofix
+pnpm build       # build the website
+pnpm build:lib   # build the publishable library
+```
+
+## Contributing
+
+Contributions are welcome! See [`AGENTS.md`](./AGENTS.md) for the architecture, conventions, and release workflow before opening a pull request.
+
 ## You just want to play?
 
 *👉 The live site is here: [mnswpr.com](https://mnswpr.com)*
@@ -48,13 +84,17 @@ Can I make a page with complex interactions (more on this later) without any lib
 
 ## What I have learned:
 1. JS is awesome ✨
-1. We don't always necessarily *need* JS frameworks (or TS) ✨
+1. We don't always *need* JS frameworks (or TS) ✨
 1. Even subtle UI changes *can improve* user gameplay experience ✨
-1. There's more ways to break you're app than you are initially aware of ✨
+1. There's more ways to break your app than you are initially aware of ✨
 1. Competition motivates users to use your app more ✨
-1.  Hash in bundled filenames help issues in browser caching (when shipping versions fast) ✨
+1. Hash in bundled filenames helps avoid issues with browser caching (when shipping versions fast) ✨
 
 
+
+## License
+
+[BSD-2-Clause](./LICENSE)
 
 ---
 
