@@ -1,13 +1,21 @@
 {
-  "name": "app",
+  "name": "mnswpr",
   "version": "0.0.1",
   "description": "the mnswpr.com web app",
   "private": true,
+  "type": "module",
   "main": "main.js",
   "scripts": {
+    "dev": "npx -y firebase-tools emulators:exec --only firestore --ui \"node scripts/seed-dev-scores.js; vite\"",
+    "dev:no-db": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:preview": "npm run build && npm run preview"
+    "build:preview": "npm run build && npm run preview",
+    "deploy:db": "npx -y firebase-tools deploy --only firestore",
+    "deploy:site": "npm run build && npx -y netlify-cli deploy --prod --dir=dist",
+    "db:start": "npx -y firebase-tools emulators:start --only firestore",
+    "db:seed": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node scripts/seed-dev-scores.js",
+    "db:stop": "pkill -f '[c]loud-firestore-emulator'; pkill -f '[f]irebase.* emulators:'; true"
   },
   "devDependencies": {
     "@ayo-run/mnswpr": "workspace:*",

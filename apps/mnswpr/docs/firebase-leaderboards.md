@@ -138,10 +138,10 @@ locally (so you validate them before deploying). The flag
 Everyday dev loop:
 
 ```bash
-pnpm emulators      # terminal 1: Firestore emulator (+ Emulator UI) on :8080
-pnpm seed:emulator  # terminal 2, once: fill it with sample scores
-pnpm dev            # terminal 2: app runs against the local emulator
+pnpm -F mnswpr run dev   # emulator (+ UI) on :8080, auto-seeded with sample scores, + app dev server
 ```
+
+`dev` seeds the fresh emulator for you (via `emulators:exec "node scripts/seed-dev-scores.js; vite"`). Use the standalone `db:start` / `db:seed` scripts only when running the emulator separately from the app.
 
 Wiring: `app/main.js` passes `{ emulator: { host, port } }` to `FirebaseAdapter`,
 which calls `connectFirestoreEmulator`. If the emulator isn't running the board

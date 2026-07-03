@@ -6,21 +6,43 @@ Guidance for AI coding agents working in this repository.
 
 Classic Minesweeper as a vanilla web game — no framework, no TypeScript (JSDoc + `// @ts-check` only). Deployed at [mnswpr.com](https://mnswpr.com) (Netlify) and published to npm as `@ayo-run/mnswpr`. The game engine has **zero runtime dependencies**; only the website adds Firebase.
 
+**`mnswpr` is the main test app.** It's the reference app for the monorepo and the default target for local runs — `.claude/launch.json` launches it (`dev` on :5173, `preview` on :4173), and it's what you should build/run/preview when verifying changes to the shared packages or tooling.
+
 ## Commands
+
+Workspace-wide commands run from the root; per-app commands target the app by name with pnpm's `-F` filter (apps are named `<name>` — there are no mnswpr-specific root scripts).
 
 ```bash
 pnpm i              # install (pnpm is required — this is a pnpm workspace)
-pnpm dev            # run the website dev server (vite apps/mnswpr) — most common
-pnpm build          # build the website  -> apps/mnswpr/dist
-pnpm build:lib      # build the publishable library -> packages/mnswpr/dist
-pnpm lint           # eslint . (JS + CSS); runs automatically on pre-commit
-pnpm lint:fix       # eslint --fix
-pnpm build:preview  # build the app and serve the production preview
 pnpm test           # run the Vitest suite once (jsdom)
 pnpm test:watch     # run Vitest in watch mode
+pnpm lint           # eslint . (JS + CSS); runs automatically on pre-commit
+pnpm lint:fix       # eslint --fix
+pnpm build:lib      # build the publishable library -> packages/mnswpr/dist
+
+pnpm -F mnswpr run dev            # Firestore emulator + auto-seed + dev server (emulators:exec) — most common; needs JDK 21+
+pnpm -F mnswpr run dev:no-db      # plain vite, no emulator (UI-only work / no JDK)
+pnpm -F mnswpr run build          # build the website -> apps/mnswpr/dist
+pnpm -F mnswpr run build:preview  # build the app and serve the production preview
 ```
 
-Tests are co-located with the package they exercise (`packages/utils/test/`, `packages/mnswpr/test/`) and run under **Vitest** with a jsdom environment (root config in `vitest.config.js`). They cover the shared utils and drive the engine through real DOM events (mount `#app`, dispatch mouse events, assert on cell/grid attributes). For anything visual or input-timing related, also verify by running `pnpm dev` and playing.
+### Infra (local CLI only — no web dashboards)
+
+All infra runs through local CLIs. Each app **owns its infra scripts** in its own `package.json` under generic, tech-agnostic names (`deploy:db`, not `deploy:firestore`) — run them by targeting the app with pnpm's `-F` filter (no root wrapper scripts):
+
+```bash
+pnpm -F mnswpr run db:start    # local DB emulator (mnswpr -> Firestore), standalone
+pnpm -F mnswpr run db:seed       # seed the running local emulator
+pnpm -F mnswpr run db:stop       # kill a stray/orphaned Firestore emulator holding :8080
+pnpm -F mnswpr run deploy:db     # deploy DB rules/indexes (-> firebase deploy --only firestore)
+pnpm -F mnswpr run deploy:site   # build + deploy hosting (-> netlify deploy --prod)
+```
+
+Each app defines the same generic script names backed by whatever stack it uses (e.g. Postgres, a different host), so `pnpm -F <name> run deploy:db` is uniform across apps. `deploy:site` requires a one-time `npx netlify-cli login && npx netlify-cli link` per app.
+
+The Firestore emulator needs **Java** (it's a JVM program). `pnpm install` runs a root `postinstall` (`scripts/ensure-java.mjs`) that installs a user-local Temurin JRE 21 into `~/.local` without `sudo` when `java` is missing — idempotent, non-fatal, and auto-skipped on `CI` / `SKIP_JRE_SETUP` / unsupported platforms.
+
+Tests are co-located with the package they exercise (`packages/utils/test/`, `packages/mnswpr/test/`) and run under **Vitest** with a jsdom environment (root config in `vitest.config.js`). They cover the shared utils and drive the engine through real DOM events (mount `#app`, dispatch mouse events, assert on cell/grid attributes). For anything visual or input-timing related, also verify by running `pnpm -F mnswpr run dev` and playing.
 
 Node version: `.nvmrc` pins `lts/*`.
 
@@ -28,7 +50,7 @@ Node version: `.nvmrc` pins `lts/*`.
 
 This is the **Cozy Games** monorepo. Workspaces are declared in `pnpm-workspace.yaml` as `apps/*`, `packages/*`, and `sites/*`. `utils/` is now a real workspace package (`@cozy-games/utils`), imported by name — no more `../utils` relative paths.
 
-- **`apps/mnswpr/`** — `@ayo-run/mnswpr`'s host, the mnswpr.com website. Consumes the engine and leaderboard via `workspace:*` (`import mnswpr from '@ayo-run/mnswpr/mnswpr.js'`) and wires them together in `apps/mnswpr/main.js`. Owns its Firebase config (`firebase.json`, `firestore.rules`, `.firebaserc`) and app-specific scripts (`apps/mnswpr/scripts/`). A future app (e.g. sudoku) gets its own `apps/<name>/`.
+- **`apps/mnswpr/`** — package `mnswpr`, `@ayo-run/mnswpr`'s host, the mnswpr.com website. Consumes the engine and leaderboard via `workspace:*` (`import mnswpr from '@ayo-run/mnswpr/mnswpr.js'`) and wires them together in `apps/mnswpr/main.js`. Owns its Firebase config (`firebase.json`, `firestore.rules`, `.firebaserc`) and app-specific scripts (`apps/mnswpr/scripts/`). A future app (e.g. sudoku) gets its own `apps/<name>/` and its `package.json` `name` is just the app name (`<name>`, unscoped) so it's addressable directly by name (`pnpm -F <name> run <script>`).
 - **`packages/mnswpr/`** — `@ayo-run/mnswpr`, the standalone, framework-free game engine published to npm. `packages/mnswpr/mnswpr.js` is the whole engine; `levels.js` defines the four difficulty presets. Depends only on `@cozy-games/utils`.
 - **`packages/leaderboard/`** — `@cozy-games/leaderboard`, a backend-agnostic, time-windowed leaderboard (adapter-injected storage).
 - **`packages/utils/`** — `@cozy-games/utils`, shared services with no dependencies, re-exported from `index.js`: `StorageService`, `TimerService` (`pretty()` time formatting used by both engine and leaderboard), `LoggerService`, `LoadingService`, and date-bucket helpers.

@@ -23,14 +23,43 @@ Each app owns its own backend config (e.g. mnswpr's Firestore rules live in
 
 This is a [pnpm](https://pnpm.io) workspace (pnpm is required).
 
+Workspace-wide commands run from the root:
+
 ```bash
 pnpm i              # install
-pnpm dev            # run the mnswpr app (Vite dev server)
 pnpm test           # run all package tests (vitest)
 pnpm lint           # eslint
-pnpm build          # build the mnswpr app     -> apps/mnswpr/dist
 pnpm build:lib      # build the engine package -> packages/mnswpr/dist
 ```
+
+### Per-app local development
+
+Apps aren't run from the root — target the app by name with pnpm's `-F` filter. Apps are
+named `<name>` (e.g. `mnswpr`), so every app runs the same way:
+
+```bash
+pnpm -F mnswpr run dev       # start that app's Vite dev server
+pnpm -F mnswpr run build     # build just that app  -> apps/mnswpr/dist
+pnpm -F mnswpr run preview   # preview its production build
+```
+
+## Infra (per-app, via local CLI)
+
+Infra runs through local CLIs, never web dashboards. Each app owns its infra scripts
+under generic names (`deploy:db`, `deploy:site`, `db:start`, `db:seed`) — run them by
+targeting the app with pnpm's `-F` filter:
+
+```bash
+pnpm -F mnswpr run db:start    # start the local DB emulator (Firestore) — needs Java, see app README
+pnpm -F mnswpr run db:seed       # seed the running emulator with dev data
+pnpm -F mnswpr run db:stop       # kill a stray emulator left holding :8080
+pnpm -F mnswpr run deploy:db     # deploy DB rules/indexes  (firebase deploy --only firestore)
+pnpm -F mnswpr run deploy:site   # build + deploy hosting   (netlify deploy --prod)
+```
+
+Apps are named `<name>`, so a future app uses the same command shape
+(`pnpm -F <name> run deploy:db`), backed by whatever stack that app uses.
+`deploy:site` needs a one-time `npx netlify-cli login && npx netlify-cli link` per app.
 
 See [apps/mnswpr/README.md](apps/mnswpr/README.md) for the game itself, and each package's
 README for library usage.
