@@ -3,12 +3,19 @@
 
 Play it here: [mnswpr.com](https://mnswpr.com). This is the classic game **Minesweeper** built with vanilla web technologies (i.e., no framework dependency).
 
-<!-- TODO: replace with the actual screenshot/GIF once supplied (confirm final path/filename) -->
-![mnswpr gameplay](./screenshot.png)
+![mnswpr gameplay](https://git.ayo.run/ayo/mnswpr/raw/branch/main/screenshot.png)
 
-Technology Stack: HTML, JS, and CSS; [Google Firebase](https://firebase.google.com) for leader board store; [Netlify](https://netlify.com) for hosting
+## How to Play
 
-## Usage
+The goal is to reveal every safe cell without detonating a mine. Your **first click is always safe**.
+
+- **Left click** — reveal a cell
+- **Right click** — flag / unflag a suspected mine
+- **Left + right click together** (chording) — reveal the neighbors of a satisfied number
+- **Touch** — tap to reveal, long-press to flag
+
+
+## Ways to Use
 
 The web is a wonderful, free, and open platform to create and distribute value. You can use **mnswpr** in different ways:
 
@@ -26,15 +33,6 @@ const game = new mnswpr('app')
 game.initialize()
 ```
 
-## How to Play
-
-The goal is to reveal every safe cell without detonating a mine. Your **first click is always safe**.
-
-- **Left click** — reveal a cell
-- **Right click** — flag / unflag a suspected mine
-- **Left + right click together** (chording) — reveal the neighbors of a satisfied number
-- **Touch** — tap to reveal, long-press to flag
-
 ## Tooling
 The project has gone through years of existence. It started from 2019 when tooling was massively different. I have [modernized it](https://elk.zone/social.ayco.io/@ayo/116333804543330938) since and have witnessed how much easier and faster it is to build now - even without web frameworks or LLMs!
 
@@ -49,6 +47,9 @@ As of now the tooling I use are:
 Because a big part of this project's purpose is to track how the software development industry evolves — and because it has come a long way in modernizing along the way — I now also use it as a **playground for coding agents**. It's a small, framework-free, well-scoped codebase, which makes it a great sandbox to see how AI agents read, reason about, and change real code. To help them get their bearings quickly, the repo ships an [`AGENTS.md`](./AGENTS.md) describing the architecture and conventions.
 
 ## Development
+
+Technology Stack: HTML, JS, and CSS; [Google Firebase](https://firebase.google.com) for leader board store; [Netlify](https://netlify.com) for hosting
+
 To start development, you need [`node`](https://nodejs.org/en/download). I highly recommend [`pnpm`](https://pnpm.io/installation) to be used as well. Once you know you have this, you can do the following:
 1. Install dependencies: `pnpm i`
 2. Start the dev server: `pnpm run dev`
