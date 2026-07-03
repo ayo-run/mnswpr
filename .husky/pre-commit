@@ -1,2 +1,11 @@
 echo "pre-commit..."
 npm run lint
+
+# Secret scan of staged files — blocks committing tokens, private keys, or a
+# stray .env.production before it ever reaches history. Config: .secretlintrc.json
+# / .secretlintignore. Full-tree scan: `pnpm run scan:secrets`.
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+if [ -n "$staged" ]; then
+  echo "secret-scan (staged files)..."
+  printf '%s\n' "$staged" | xargs -r -d '\n' npx secretlint --secretlintignore .secretlintignore
+fi

@@ -20,17 +20,20 @@
     "postinstall": "node scripts/ensure-java.mjs",
     "prepare": "husky",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "scan:secrets": "secretlint --secretlintignore .secretlintignore \"**/*\""
   },
   "devDependencies": {
     "@eslint/css": "^1.1.0",
     "@eslint/js": "^10.0.1",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.2",
     "@stylistic/eslint-plugin": "^5.10.0",
     "bumpp": "^11.0.1",
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "secretlint": "^13.0.2",
     "simple-git": "^3.33.0",
     "vite": "^8.0.3",
     "vitest": "^4.1.9"

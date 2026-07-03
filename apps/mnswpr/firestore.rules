@@ -4,13 +4,10 @@ rules_version = '2'
 // rules are the enforced schema: public reads for the boards, validated
 // create-only writes for scores, no client writes to server config.
 //
-// SECURITY MODEL: the Firebase web config is public (it ships to every browser),
-// so these rules — not secrecy of the config or the codebase — are what protect
-// the data. No collection allows a client to UPDATE or DELETE existing docs, so
-// no client (with or without the source) can wipe the production boards. The
-// powerful vectors (Admin SDK / service-account keys, and IAM console access)
-// bypass rules entirely — keep those out of the repo and locked down in GCP.
-// See docs/firebase-leaderboards.md ("Protecting production data").
+// The Firebase web config that ships in the client is public by design (it is
+// not a secret); these rules — not secrecy — are what govern access. No
+// collection allows a client to update or delete existing docs. Keep any
+// admin/service-account credentials out of the repo and locked down in GCP.
 //
 // Rules match by namespace SUFFIX (regex) rather than a literal prefix, so the
 // same set covers production (`mw-*`) and test (`mw-test-*`) collections in the
@@ -19,7 +16,7 @@ rules_version = '2'
 // block is guarded by a regex on the captured collection name.
 //
 // Deploy with (see docs/firebase-leaderboards.md):
-//   npx firebase deploy --only firestore:rules --project prod
+//   pnpm -F mnswpr exec firebase deploy --only firestore:rules --project prod
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -36,13 +33,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Per-browser personal archive. Write-only from the client (the app never
-    // reads it back), append/merge only, and NEVER deletable. This is the only
-    // client-writable collection, so denying delete/read here removes the last
-    // way a client could destroy or harvest data.
+    // Per-browser personal archive. Not readable by clients, append/merge only,
+    // and never deletable. The doc is a map of gameId -> game object (one doc
+    // per day, merged as games finish); the entry-count cap keeps a single doc
+    // bounded (Firestore already limits any doc to 1 MiB). 500 is far above any
+    // real day of play.
     match /{all}/{browserId}/games/{session} {
       allow read:           if false;
-      allow create, update: if all.matches('mw(-[a-z]+)?-all');
+      allow create, update: if all.matches('mw(-[a-z]+)?-all')
+                            && request.resource.data.size() <= 500;
       allow delete:         if false;
     }
 
