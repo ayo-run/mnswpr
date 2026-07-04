@@ -19,6 +19,48 @@ import { floodReveal, countFlagsAround, allMines } from './reveal.js'
 
 const freshCell = () => ({ mine: false, adjacent: 0, status: 'hidden' })
 
+/** Valid game phases and per-cell statuses — the closed sets a snapshot may name. */
+const PHASES = new Set(['fresh', 'active', 'won', 'lost'])
+const CELL_STATUSES = new Set(['hidden', 'flagged', 'revealed'])
+
+/**
+ * Assert a serialized game state (from {@link MinesweeperRules.serialize}, or its
+ * JSON round-trip) is well-formed before reviving it, so a corrupt or truncated
+ * snapshot fails with a clear error instead of quietly producing a broken game.
+ *
+ * @param {unknown} snap
+ */
+function assertStateSnapshot(snap) {
+  if (snap === null || typeof snap !== 'object') {
+    throw new TypeError(`deserialize: expected a state snapshot object (got ${snap === null ? 'null' : typeof snap})`)
+  }
+  const s = /** @type {any} */ (snap)
+  if (typeof s.seed !== 'number') throw new TypeError('deserialize: snapshot.seed must be a number')
+  const cfg = s.config
+  if (cfg === null || typeof cfg !== 'object' || !Number.isInteger(cfg.rows) || !Number.isInteger(cfg.cols) || !Number.isInteger(cfg.mines)) {
+    throw new TypeError('deserialize: snapshot.config must be { rows, cols, mines } integers')
+  }
+  if (!PHASES.has(s.phase)) throw new RangeError(`deserialize: snapshot.phase must be one of ${[...PHASES].join('/')} (got ${JSON.stringify(s.phase)})`)
+  if (typeof s.minesPlaced !== 'boolean') throw new TypeError('deserialize: snapshot.minesPlaced must be a boolean')
+  if (!Number.isInteger(s.revealedSafe) || s.revealedSafe < 0) throw new RangeError('deserialize: snapshot.revealedSafe must be a non-negative integer')
+  const g = s.grid
+  if (g === null || typeof g !== 'object' || !Number.isInteger(g.rows) || !Number.isInteger(g.cols) || !Array.isArray(g.cells)) {
+    throw new TypeError('deserialize: snapshot.grid must be { rows, cols, cells[] }')
+  }
+  if (g.rows !== cfg.rows || g.cols !== cfg.cols) {
+    throw new RangeError(`deserialize: grid ${g.rows}x${g.cols} disagrees with config ${cfg.rows}x${cfg.cols}`)
+  }
+  if (g.cells.length !== g.rows * g.cols) {
+    throw new RangeError(`deserialize: grid.cells must have ${g.rows * g.cols} entries (got ${g.cells.length})`)
+  }
+  for (let i = 0; i < g.cells.length; i++) {
+    const cell = g.cells[i]
+    if (cell === null || typeof cell !== 'object' || typeof cell.mine !== 'boolean' || !Number.isInteger(cell.adjacent) || !CELL_STATUSES.has(cell.status)) {
+      throw new TypeError(`deserialize: grid.cells[${i}] must be { mine: boolean, adjacent: integer, status: hidden/flagged/revealed }`)
+    }
+  }
+}
+
 /** @param {State} state */
 function isWin(state) {
   const { rows, cols, mines } = state.config
@@ -229,6 +271,7 @@ export const MinesweeperRules = {
    * @returns {State}
    */
   deserialize(snap) {
+    assertStateSnapshot(snap)
     return {
       seed: snap.seed,
       config: snap.config,

@@ -111,10 +111,26 @@ export class GameSession {
     if (typeof rules.deserialize !== 'function') {
       throw new TypeError('GameSession.deserialize: rules must implement deserialize(snapshot)')
     }
-    const session = new GameSession(rules, { state: rules.deserialize(snapshot.state), clock })
-    session._log = snapshot.log.map(({ move, t }) => ({ move, t }))
-    session._t0 = snapshot.t0
-    session._tEnd = snapshot.tEnd
+    if (snapshot === null || typeof snapshot !== 'object') {
+      throw new TypeError(`GameSession.deserialize: expected a snapshot object (got ${snapshot === null ? 'null' : typeof snapshot})`)
+    }
+    const { state, log, t0, tEnd } = snapshot
+    if (!Array.isArray(log)) {
+      throw new TypeError('GameSession.deserialize: snapshot.log must be an array')
+    }
+    for (const entry of log) {
+      if (entry === null || typeof entry !== 'object' || typeof entry.t !== 'number' || entry.move === null || typeof entry.move !== 'object') {
+        throw new TypeError('GameSession.deserialize: each log entry must be { move: object, t: number }')
+      }
+    }
+    if (!(t0 === null || typeof t0 === 'number') || !(tEnd === null || typeof tEnd === 'number')) {
+      throw new TypeError('GameSession.deserialize: snapshot.t0/tEnd must each be a number or null')
+    }
+    // rules.deserialize validates and revives the game-state half.
+    const session = new GameSession(rules, { state: rules.deserialize(state), clock })
+    session._log = log.map(({ move, t }) => ({ move, t }))
+    session._t0 = t0
+    session._tEnd = tEnd
     return session
   }
 }

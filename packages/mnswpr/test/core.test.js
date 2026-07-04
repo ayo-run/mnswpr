@@ -450,6 +450,114 @@ describe('state serialization (serialize / deserialize)', () => {
   })
 })
 
+describe('resume from serialized state (Layer 1)', () => {
+  // Reveal every remaining non-mine cell in row-major order, ticking the injected
+  // clock before each move — a deterministic way to finish an in-progress board.
+  const finish = (session, clock) => {
+    const { grid, config } = session.state
+    for (let r = 0; r < config.rows; r++) {
+      for (let c = 0; c < config.cols; c++) {
+        if (!grid.at(r, c).mine && grid.at(r, c).status !== 'revealed') {
+          clock.tick()
+          session.applyMove({ type: 'reveal', r, c })
+        }
+      }
+    }
+  }
+
+  const validSnapshot = () => {
+    const s = new GameSession(MinesweeperRules, { seed: 1, config: beginner, clock: makeClock() })
+    s.applyMove({ type: 'reveal', r: 0, c: 0 })
+    return JSON.parse(JSON.stringify(s.serialize()))
+  }
+
+  it('play N moves → serialize → restore → finish: final state identical to an uninterrupted run', () => {
+    // Uninterrupted reference run.
+    const clockU = makeClock()
+    const uninterrupted = new GameSession(MinesweeperRules, { seed: 77, config: beginner, clock: clockU })
+    clockU.tick()
+    uninterrupted.applyMove({ type: 'reveal', r: 0, c: 0 })
+    finish(uninterrupted, clockU)
+
+    // Interrupted: identical opening move, snapshot, restore on the SAME clock
+    // instant, then finish with the identical remaining moves.
+    const clockI = makeClock()
+    const before = new GameSession(MinesweeperRules, { seed: 77, config: beginner, clock: clockI })
+    clockI.tick()
+    before.applyMove({ type: 'reveal', r: 0, c: 0 })
+    const snap = JSON.parse(JSON.stringify(before.serialize()))
+    const resumed = GameSession.deserialize(MinesweeperRules, snap, { clock: clockI })
+    finish(resumed, clockI)
+
+    expect(resumed.status()).toBe('won')
+    expect(resumed.view()).toEqual(uninterrupted.view())     // identical board + progress
+    expect(resumed.result()).toEqual(uninterrupted.result()) // identical log + time
+  })
+
+  it('elapsed time continues (not reset) after restore, on the injected clock', () => {
+    const clock = makeClock() // 1000
+    const s = new GameSession(MinesweeperRules, { seed: 21, config: beginner, clock })
+    clock.tick() // 1050
+    s.applyMove({ type: 'reveal', r: 0, c: 0 }) // t0 = 1050
+    clock.tick(); clock.tick() // 1150
+    expect(s.elapsed()).toBe(100) // 1150 − 1050
+
+    const snap = JSON.parse(JSON.stringify(s.serialize()))
+    // Resume on a fresh clock that continues from the same instant (1150).
+    const reviveClock = makeClock(clock())
+    const resumed = GameSession.deserialize(MinesweeperRules, snap, { clock: reviveClock })
+
+    // Preserved, not reset to zero.
+    expect(resumed.elapsed()).toBe(100)
+
+    // And it keeps advancing on the injected clock as play continues.
+    reviveClock.tick() // 1200
+    const mine = firstMine(resumed.state.grid)
+    resumed.applyMove({ type: 'flag', r: mine.r, c: mine.c })
+    expect(resumed.elapsed()).toBe(150) // 1200 − 1050
+    expect(resumed.elapsed()).toBeGreaterThan(100)
+  })
+
+  it('a finished (won/lost) session round-trips with its final elapsed frozen', () => {
+    const clock = makeClock()
+    const s = new GameSession(MinesweeperRules, { seed: 5, config: beginner, clock })
+    clock.tick()
+    s.applyMove({ type: 'reveal', r: 0, c: 0 })
+    finish(s, clock)
+    expect(s.status()).toBe('won')
+    const finalTime = s.elapsed()
+
+    const resumed = GameSession.deserialize(
+      MinesweeperRules,
+      JSON.parse(JSON.stringify(s.serialize())),
+      { clock: makeClock(999999) } // a wildly different clock must not change a frozen time
+    )
+    expect(resumed.status()).toBe('won')
+    expect(resumed.elapsed()).toBe(finalTime)
+  })
+
+  it('rejects invalid or corrupt snapshots with a clear error', () => {
+    const good = validSnapshot()
+    // envelope corruption (caught by GameSession.deserialize)
+    expect(() => GameSession.deserialize(MinesweeperRules, null)).toThrow(TypeError)
+    expect(() => GameSession.deserialize(MinesweeperRules, { ...good, log: 'nope' })).toThrow(TypeError)
+    expect(() => GameSession.deserialize(MinesweeperRules, { ...good, log: [{ move: {}, t: 'soon' }] })).toThrow(TypeError)
+    expect(() => GameSession.deserialize(MinesweeperRules, { ...good, t0: 'later' })).toThrow(TypeError)
+    // game-state corruption (delegated to rules.deserialize)
+    expect(() => GameSession.deserialize(MinesweeperRules, { ...good, state: null })).toThrow(TypeError)
+    expect(() => GameSession.deserialize(MinesweeperRules, { ...good, state: { ...good.state, phase: 'bogus' } })).toThrow(RangeError)
+    const truncated = { ...good, state: { ...good.state, grid: { ...good.state.grid, cells: good.state.grid.cells.slice(1) } } }
+    expect(() => GameSession.deserialize(MinesweeperRules, truncated)).toThrow(RangeError)
+  })
+
+  it('rules.deserialize rejects a malformed state snapshot directly', () => {
+    expect(() => MinesweeperRules.deserialize(null)).toThrow(TypeError)
+    expect(() => MinesweeperRules.deserialize({})).toThrow(TypeError) // missing config/grid
+    const good = validSnapshot().state
+    expect(() => MinesweeperRules.deserialize({ ...good, grid: { ...good.grid, rows: good.grid.rows + 1 } })).toThrow(RangeError)
+  })
+})
+
 describe('session + timing (Layer 1)', () => {
   it('reports authoritative elapsed time from the injected clock', () => {
     const clock = makeClock()
