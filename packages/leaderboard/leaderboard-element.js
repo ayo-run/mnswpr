@@ -1,15 +1,23 @@
-import { WebComponent } from 'web-component-base'
+import { WebComponent, html } from 'web-component-base'
 import { LeaderBoardService } from './leader-board.js'
+import { DURATIONS } from './leaderboard-read.js'
 
 /**
  * `<cozy-leaderboard>` — a custom element that lets a developer compose the
  * leaderboard UI declaratively in HTML instead of wiring it in JavaScript.
  *
- * Built on `web-component-base` (WebComponent base class + lifecycle hooks). It
- * extends WCB for the custom-element scaffolding (onInit/onDestroy, connect
- * handling) and delegates all inner DOM — the duration tabs and the ranked
- * list — to the existing LeaderBoardService, which already builds and manages
- * that DOM (including in-place tab swaps).
+ * Built on `web-component-base` (WCB) the idiomatic way: the view is a pure
+ * `html` template over a precomputed view-state object, WCB's own
+ * `attributeChangedCallback` feeds observed attributes into `this.props` and
+ * the `onChanges` hook, and updates go through the base class's `render()`.
+ * Data access and user-facing strings stay in {@link LeaderBoardService} /
+ * LeaderBoardReader — the element only turns query results into templates.
+ *
+ * `static props` is deliberately NOT used: WCB 4.1.2 writes each prop's
+ * default onto the element as an attribute inside the constructor, which the
+ * custom-elements spec forbids during synchronous construction — it breaks
+ * `document.createElement('cozy-leaderboard')` entirely. Plain
+ * `observedAttributes` + `onChanges` gives the same reactivity without that.
  *
  * Composition lives in HTML attributes; the storage backend (adapter) is set
  * once in JS via configureLeaderboard(), because env-var config can't live in
@@ -53,49 +61,134 @@ const prettyTime = ms => {
 const FORMATTERS = { time: prettyTime }
 const resolveFormat = name => FORMATTERS[name]
 
+// WCB coerces an empty attribute value to a non-string (`'' -> true`), so
+// observed values are read through this guard before use.
+const str = value => (typeof value === 'string' ? value : '')
+
+// Inline styles (as WCB `html` style objects) — the same visual output the
+// LeaderBoardReader produces for the imperative JS composition path.
+const STYLES = {
+  wrapper: { maxWidth: '270px', margin: '0 auto' },
+  heading: { borderBottom: '1px solid #c0c0c0', paddingBottom: '10px' },
+  tabBar: { display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '10px' },
+  list: { listStyle: 'none', textAlign: 'left' },
+  row: { display: 'flex' },
+  name: {
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    padding: '0 5px',
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+    flex: '1'
+  }
+}
+
+const tabStyle = active => ({
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '2px 4px',
+  fontSize: '0.85em',
+  color: active ? '#ffffff' : '#999999',
+  fontWeight: active ? 'bold' : 'normal',
+  borderBottom: active ? '2px solid orange' : '2px solid transparent'
+})
+
 export class CozyLeaderboard extends WebComponent {
 
   static get observedAttributes() {
     return ['category', 'title', 'duration', 'score-order', 'format']
   }
 
-  // WCB lifecycle: register/unregister so configureLeaderboard() can re-render.
+  // View state the template renders from. Either { board: false } (not
+  // configured) or { board: true, tabs, active, list } where list is
+  // { rows: [{ index, name, score }] } or { message } (loading/empty/error).
+  _view = { board: false }
+  // Selected duration window; survives category changes and re-connects.
+  // null until the board first mounts, so the `duration` attribute is honored.
+  _activeDuration = null
+  _connected = false
+  _token = 0
+
+  // WCB lifecycle: connect mounts the board, disconnect unregisters. The
+  // instances set lets configureLeaderboard() re-mount live elements.
   onInit() {
+    this._connected = true
     instances.add(this)
-  }
-
-  onDestroy() {
-    instances.delete(this)
-  }
-
-  // Attributes are read directly (getAttribute) rather than through WCB's typed
-  // props proxy, so optional/empty values never trip its type enforcement.
-  attributeChangedCallback(name, previousValue, currentValue) {
-    if (previousValue === currentValue || !this.isConnected) return
-    this._mount(name === 'duration' ? (currentValue || undefined) : undefined)
-  }
-
-  // WCB calls render() on connect; we treat it as "(re)mount the board".
-  render() {
     this._mount()
   }
 
+  onDestroy() {
+    this._connected = false
+    instances.delete(this)
+  }
+
+  /**
+   * WCB change hook — `property` is the attribute (kebab-case) name. A title
+   * change needs no re-query: the heading reads `this.props.title`, so WCB's
+   * own render already updated it. score-order/format changes rebuild the
+   * service so the new config actually takes effect.
+   */
+  onChanges({ property, currentValue }) {
+    if (!this._connected || property === 'title') return
+    if (property === 'score-order' || property === 'format') this._svc = null
+    this._mount(property === 'duration' ? (str(currentValue) || undefined) : undefined)
+  }
+
+  get template() {
+    const view = this._view
+    if (!view.board) return html`<em>Leaderboard not configured.</em>`
+    return html`
+      <div style=${STYLES.wrapper}>
+        <h3 style=${STYLES.heading}>${str(this.props.title)}</h3>
+        <div style=${STYLES.tabBar}>
+          ${view.tabs.map(tab => html`
+            <button
+              type="button"
+              title=${tab.tooltip}
+              data-duration=${tab.id}
+              style=${tabStyle(tab.id === view.active)}
+              onclick=${() => this._selectTab(tab.id)}
+            >${tab.label}</button>
+          `)}
+        </div>
+        <div>
+          ${view.list.rows
+            ? html`
+              <div style=${STYLES.list}>
+                ${view.list.rows.map(row => html`
+                  <div style=${STYLES.row}>
+                    <div>#${row.index}</div>
+                    <div title=${row.name} style=${STYLES.name}>${row.name}</div>
+                    <div>${row.score}</div>
+                  </div>
+                `)}
+              </div>`
+            : html`<em>${view.list.message}</em>`}
+        </div>
+      </div>
+    `
+  }
+
   // Per-element override properties (public): adapter, formatScore, qualifies,
-  // labels, emptyMessages, loadingText, errorText, anonymousName. Each falls back
-  // to the shared configureLeaderboard() value, then the package default. Set
-  // them before the element connects (or clear `_svc` to force a rebuild).
+  // labels, tooltips, emptyMessages, loadingText, errorText, anonymousName.
+  // Each falls back to the shared configureLeaderboard() value, then the
+  // package default. Set them before the element connects (or clear `_svc` to
+  // force a rebuild). Rich values stay plain properties — WCB props are
+  // attribute-backed and only carry serializable primitives.
   _service() {
     if (this._svc) return this._svc
     const adapter = this.adapter || sharedConfig.adapter
     if (!adapter) return null
     const formatScore = this.formatScore
-      || resolveFormat(this.getAttribute('format'))
+      || resolveFormat(str(this.props.format))
       || sharedConfig.formatScore
       || resolveFormat(sharedConfig.format)
       || String
     this._svc = new LeaderBoardService({
       adapter,
-      scoreOrder: this.getAttribute('score-order') || sharedConfig.scoreOrder || 'asc',
+      scoreOrder: str(this.props.scoreOrder) || sharedConfig.scoreOrder || 'asc',
       formatScore,
       qualifies: this.qualifies || sharedConfig.qualifies,
       // User-facing strings — pass through so apps localize without touching the package.
@@ -110,36 +203,76 @@ export class CozyLeaderboard extends WebComponent {
   }
 
   /**
-   * (Re)render the board. The first successful mount honors the author's
-   * `duration` attribute; later mounts preserve the service's remembered
-   * duration (so switching category keeps the selected tab) unless a duration
-   * is passed explicitly.
+   * (Re)mount the board. The first mount honors the author's `duration`
+   * attribute; later mounts keep the selected duration (so switching category
+   * keeps the selected tab) unless a duration is passed explicitly.
    */
   _mount(durationArg) {
-    if (!this.isConnected) return
+    if (!this._connected) return
     const service = this._service()
     if (!service) {
-      this.replaceChildren(this._message('Leaderboard not configured.'))
+      this._view = { board: false }
+      this._paint()
       return
     }
+    const duration = durationArg
+      ?? this._activeDuration
+      ?? (str(this.props.duration) || 'today')
+    this._activeDuration = duration
+    this._load(service, duration)
+  }
 
-    let duration = durationArg
-    if (duration === undefined && !this._mounted) {
-      duration = this.getAttribute('duration') || undefined
+  _selectTab(id) {
+    this._activeDuration = id
+    this._load(this._service(), id)
+  }
+
+  /**
+   * Query one duration window and project the result into view state: a
+   * loading message immediately, then rows / a random empty message / the
+   * error text. The token guards against a stale response (quick tab or
+   * category switches) overwriting a newer one.
+   */
+  async _load(service, durationId) {
+    const reader = service.reader
+    const tabs = DURATIONS.map(d => ({ id: d.id, label: reader.label(d), tooltip: reader.tooltip(d) }))
+    const board = list => ({ board: true, tabs, active: durationId, list })
+
+    const token = ++this._token
+    this._view = board({ message: reader.loadingText })
+    this._paint()
+
+    let list
+    try {
+      const rows = await reader.list(str(this.props.category), durationId)
+      list = (rows && rows.length)
+        ? {
+          rows: rows.map((row, index) => ({
+            index: index + 1,
+            name: row.name || reader.anonymousName,
+            score: reader.formatScore(row.score)
+          }))
+        }
+        : { message: reader.emptyMessage() }
+    } catch {
+      list = { message: reader.errorText }
     }
+    if (token !== this._token) return
+    this._view = board(list)
+    this._paint()
+  }
 
-    const token = (this._token || 0) + 1
-    this._token = token
-    service.render(this.getAttribute('category') || '', this.getAttribute('title') || '', duration)
-      .then(el => {
-        if (this._token !== token) return
-        this.replaceChildren(el)
-        this._mounted = true
-      })
-      .catch(() => {
-        if (this._token !== token) return
-        this.replaceChildren(this._message('Leaderboard unavailable right now.'))
-      })
+  /**
+   * Render the current view state through WCB. WCB's render() replaces the
+   * whole subtree (no diffing yet), which would drop focus from a clicked
+   * duration tab — the one behavior the base class can't preserve for us — so
+   * focus is handed to the replacement tab explicitly.
+   */
+  _paint() {
+    const focused = document.activeElement
+    const focusedTab = focused && this.contains(focused) ? focused.dataset.duration : undefined
+    this.render()
+    if (focusedTab) this.querySelector(`button[data-duration="${focusedTab}"]`)?.focus()
   }
 
   /**
@@ -150,12 +283,6 @@ export class CozyLeaderboard extends WebComponent {
   submit(entry) {
     const service = this._service()
     if (service) return service.submit(entry)
-  }
-
-  _message(text) {
-    const em = document.createElement('em')
-    em.innerText = text
-    return em
   }
 }
 

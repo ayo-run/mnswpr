@@ -14,9 +14,10 @@ const DAY_MS = 24 * 60 * 60 * 1000
  * The four time windows are ROLLING: each shows entries from the last `ms`
  * milliseconds (strictly nested — 24h ⊆ 7d ⊆ 30d ⊆ all), sorted by score.
  * `ms: null` is the all-time view (no time filter). `title` is the hover tooltip
- * that spells out the window.
+ * that spells out the window. Exported so view layers (e.g. the
+ * `<cozy-leaderboard>` element) can render the tab bar themselves.
  */
-const DURATIONS = [
+export const DURATIONS = [
   { id: 'today', label: 'Today', ms: DAY_MS, title: 'Last 24 hours' },
   { id: 'week', label: 'Week', ms: 7 * DAY_MS, title: 'Last 7 days' },
   { id: 'month', label: 'Month', ms: 30 * DAY_MS, title: 'Last 30 days' },
@@ -75,16 +76,38 @@ export class LeaderBoardReader {
     this.anonymousName = options.anonymousName || 'Anonymous'
   }
 
-  _label(duration) {
+  /**
+   * Display label for a duration window (override-aware).
+   * @param {{ id: String, label: String }} duration - a DURATIONS entry
+   */
+  label(duration) {
     return this.labels[duration.id] || duration.label
   }
 
-  _tooltip(duration) {
+  /**
+   * Hover tooltip for a duration window (override-aware).
+   * @param {{ id: String, title: String }} duration - a DURATIONS entry
+   */
+  tooltip(duration) {
     return this.tooltips[duration.id] || duration.title
   }
 
-  _emptyMessage() {
+  /** One empty-state message, picked at random. */
+  emptyMessage() {
     return this.emptyMessages[Math.floor(Math.random() * this.emptyMessages.length)]
+  }
+
+  /**
+   * Data-level query: the ranked entries for a category and duration window,
+   * without any DOM. View layers that render themselves (e.g. the
+   * `<cozy-leaderboard>` element) use this instead of {@link render}.
+   * @param {String} category
+   * @param {String} durationId - a DURATIONS id ('today' | 'week' | 'month' | 'all')
+   * @returns {Promise<Object[]>}
+   */
+  async list(category, durationId) {
+    const duration = DURATIONS.find(d => d.id === durationId)
+    return this.adapter.listScores(this._descriptor(category, duration))
   }
 
   /**
@@ -123,7 +146,7 @@ export class LeaderBoardReader {
     wrapper.style.margin = '0 auto'
 
     const heading = document.createElement('h3')
-    heading.innerText = title
+    heading.textContent = title
     heading.style.borderBottom = '1px solid #c0c0c0'
     heading.style.paddingBottom = '10px'
     wrapper.append(heading)
@@ -147,9 +170,9 @@ export class LeaderBoardReader {
 
     DURATIONS.forEach(d => {
       const tab = document.createElement('button')
-      tab.innerText = this._label(d)
+      tab.textContent = this.label(d)
       tab.type = 'button'
-      tab.setAttribute('title', this._tooltip(d))
+      tab.setAttribute('title', this.tooltip(d))
       this._styleTab(tab, d.id === duration)
       tab.onclick = () => activate(d.id)
       tabs[d.id] = tab
@@ -186,7 +209,7 @@ export class LeaderBoardReader {
 
     listWrapper.innerHTML = ''
     const loading = document.createElement('em')
-    loading.innerText = this.loadingText
+    loading.textContent = this.loadingText
     listWrapper.append(loading)
 
     try {
@@ -197,7 +220,7 @@ export class LeaderBoardReader {
       if (this._loadToken !== token) return
       listWrapper.innerHTML = ''
       const message = document.createElement('em')
-      message.innerText = this.errorText
+      message.textContent = this.errorText
       listWrapper.append(message)
     }
   }
@@ -207,7 +230,7 @@ export class LeaderBoardReader {
 
     if (!rows || !rows.length) {
       const message = document.createElement('em')
-      message.innerText = this._emptyMessage()
+      message.textContent = this.emptyMessage()
       listWrapper.append(message)
       return
     }
@@ -222,7 +245,7 @@ export class LeaderBoardReader {
       item.style.display = 'flex'
 
       const indexElement = document.createElement('div')
-      indexElement.innerText = `#${i++}`
+      indexElement.textContent = `#${i++}`
 
       const nameElement = document.createElement('div')
       const name = data.name || this.anonymousName
@@ -237,7 +260,7 @@ export class LeaderBoardReader {
       nameElement.style.flex = '1'
 
       const scoreElement = document.createElement('div')
-      scoreElement.innerText = this.formatScore(data.score)
+      scoreElement.textContent = this.formatScore(data.score)
 
       item.append(indexElement, nameElement, scoreElement)
       list.append(item)

@@ -103,7 +103,8 @@ mounted elements.
 | `format` | `time` \| `number` \| `plain` | score display preset (below) |
 
 Attributes are reactive: change `category`/`title` at runtime and the board
-re-renders, keeping the selected duration tab.
+re-renders, keeping the selected duration tab. Changing `score-order`/`format`
+rebuilds the element's service so the new order/preset takes effect.
 
 ### `format` presets
 
@@ -230,5 +231,6 @@ The package computes the `day`/`week`/`month` bucket keys from `time_stamp`
 
   The service is cached per element, so set overrides **before** the element
   connects (or set the property and clear the element's `_svc` to force a
-  rebuild). `score-order` and `format` are read from attributes; the function/
-  array/string overrides are read from properties.
+  rebuild — changing the `score-order`/`format` attributes does this
+  automatically). `score-order` and `format` are read from attributes; the
+  function/array/string overrides are read from properties.
