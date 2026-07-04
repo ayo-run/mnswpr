@@ -12,7 +12,8 @@ Goals, in priority order:
 1. **Headless core** — game state is a plain data model, no DOM, no wall clock.
 2. **Server-authoritative capable** — the same core can run on a server that owns
    the RNG, the clock, and the move sequence, so leaderboard times are witnessed,
-   not claimed. (Closes the score-spoofing gap from the security review.)
+   not claimed — closing the gap where a client can otherwise report any finish
+   time it likes.
 3. **Backwards compatible** — the existing DOM UI, CSS, and jsdom tests keep
    working; today's offline play is just "the core with a local transport."
 4. **Extraction-ready** — a clean seam between generic (grid/session) and
@@ -183,8 +184,8 @@ Two decisions that unlock everything:
 replay(rules, { seed, config, log }) // → { status, time, valid, reason? }
 ```
 
-This is the lighter "verifiable replay" anti-cheat path from the prior discussion:
-no live per-move server needed — just call `replay()` in a Cloud Function at
+This is the lighter "verifiable replay" anti-cheat path: no live per-move server
+needed — just call `replay()` in a Cloud Function at
 submit time. It requires exactly this headless core and nothing else.
 
 > **Determinism is a hard rule for Layers 1–2:** no `Date.now()`, no
