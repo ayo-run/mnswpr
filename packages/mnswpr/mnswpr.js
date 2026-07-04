@@ -6,30 +6,39 @@
 import './mnswpr.css'
 
 import {
-  LoggerService,
   StorageService,
   TimerService
 } from '@cozy-games/utils'
 import { levels } from './levels.js'
+import { MinesweeperRules } from './core/index.js'
+import { LocalTransport } from './client/transport.js'
+import { renderEvents, revealBoard } from './client/renderer.js'
 
 const TEST_MODE = false // set to true if you want to test the game with visual hints
 const MOBILE_BUSY_DELAY = 250
 const PC_BUSY_DELAY = 500
 
 /**
- * Create Minesweeper game board
- * @param {String} appId 
+ * Create Minesweeper game board.
+ *
+ * This is the DOM CLIENT: it builds the board, handles input, and renders. All
+ * game state and rules live in the headless core (`./core`); the client drives
+ * it through a Transport and paints the events it emits (see
+ * docs/headless-core-and-client-design.md).
+ *
+ * @param {String} appId
  * @param {String} version
  * @param {{
  * levelChanged: (setting: any) => void,
  * gameDone: (game: any) => void
  * } | undefined } hooks
+ * @param {{ seed?: number }} [options] - `seed` pins the (deterministic) board,
+ *   mainly for tests/replay; omit for a fresh random game each time.
  */
-const Minesweeper = function(appId, version, hooks = undefined) {
+const Minesweeper = function(appId, version, hooks = undefined, options = {}) {
   const _this = this
   const storageService = new StorageService()
   const timerService = new TimerService()
-  const loggerService = new LoggerService()
 
   if (!hooks) {
     hooks = {
@@ -37,6 +46,8 @@ const Minesweeper = function(appId, version, hooks = undefined) {
       gameDone: () => {}
     }
   }
+
+  const configuredSeed = options.seed
 
   let grid = document.createElement('table')
   grid.setAttribute('id', 'grid')
@@ -66,7 +77,6 @@ const Minesweeper = function(appId, version, hooks = undefined) {
     highlightSurroundingCell, // middle-click down
     rightClickCell // right-click down
   ]
-  let firstClick = true
   let isBusy = false
   let clickedCell
   let cachedSetting = storageService.getFromLocal('setting')
@@ -82,12 +92,10 @@ const Minesweeper = function(appId, version, hooks = undefined) {
   }
   storageService.saveToLocal('setting', setting)
   let flagsCount = setting.mines
-  // Mine positions stored as a Set of numeric keys (row * cols + col) for O(1) lookup
-  let mines = new Set()
   // Cells currently highlighted, so removeHighlights only resets these (<=9) instead of the whole grid
   let highlightedCells = []
-  // Count of safe (non-mine) cells revealed, so the win check is O(1) instead of scanning the whole grid
-  let revealedSafeCount = 0
+  // The headless game for the current board; recreated on every generateGrid.
+  let transport
 
   this.initialize = function() {
     const headingElement = document.createElement('h1')
@@ -129,8 +137,6 @@ const Minesweeper = function(appId, version, hooks = undefined) {
       levelsDropdown.add(levelOption, null)
     })
 
-    
-
     if (TEST_MODE) {
       const testLevel = document.createElement('span')
       testLevel.innerText = 'Test Mode'
@@ -144,24 +150,20 @@ const Minesweeper = function(appId, version, hooks = undefined) {
 
   function initializeToolbar() {
     const toolbar = document.createElement('div')
-    const toolbarItems = []
 
     const flagsWrapper = document.createElement('div')
     flagsWrapper.append(flagsDisplay)
     flagsWrapper.style.height = '20px'
     toolbar.append(flagsWrapper)
-    toolbarItems.push(flagsWrapper)
 
     const smileyWrapper = document.createElement('div')
     smileyWrapper.append(smileyDisplay)
     // toolbar.append(smileyWrapper);
-    // toolbarItems.push(smileyWrapper);
 
     const timerWrapper = document.createElement('div')
     timerWrapper.append(timerDisplay)
     timerWrapper.style.height = '20px'
     toolbar.append(timerWrapper)
-    toolbarItems.push(timerWrapper)
 
     toolbar.style.cursor = 'pointer'
     toolbar.style.padding = '10px 35px'
@@ -174,14 +176,13 @@ const Minesweeper = function(appId, version, hooks = undefined) {
 
   /**
    * Updates the game level
-   * @param {String} key 
+   * @param {String} key
    */
   function updateSetting(key) {
     setting = levels[key]
     storageService.saveToLocal('setting', setting)
     generateGrid({ initial: true })
   }
-
 
   /**
    * Generate the Game Board
@@ -190,13 +191,10 @@ const Minesweeper = function(appId, version, hooks = undefined) {
    * }} options - Game Board Options
    */
   function generateGrid(options = { initial: false }) {
-    firstClick = true
     grid.innerHTML = ''
     grid.oncontextmenu = () => false
     flagsCount = setting.mines
-    mines.clear()
     highlightedCells = []
-    revealedSafeCount = 0
 
     for (let i = 0; i < setting.rows; i++) {
       let row = grid.insertRow(i)
@@ -210,8 +208,8 @@ const Minesweeper = function(appId, version, hooks = undefined) {
           initializeTouchEventHandlers(cell)
         }
 
-        let status = document.createAttribute('data-status')       
-        status.value = 'default'             
+        let status = document.createAttribute('data-status')
+        status.value = 'default'
         cell.setAttributeNode(status)
       }
     }
@@ -224,6 +222,12 @@ const Minesweeper = function(appId, version, hooks = undefined) {
       appElement.style.margin = '0 auto'
     }
 
+    // A fresh headless game. Mines are placed by the core on the first reveal
+    // (first-click safe), so there is nothing to seed into the DOM here.
+    const gameSeed = configuredSeed !== undefined ? configuredSeed : Math.floor(Math.random() * 0x7fffffff)
+    transport = new LocalTransport(MinesweeperRules, { seed: gameSeed, config: setting, clock: () => Date.now() })
+    transport.onEvent(onCoreEvent)
+
     /**
      * TODO: add hook afterGridGenerated
      *   - for initializing the leaderboard
@@ -233,8 +237,51 @@ const Minesweeper = function(appId, version, hooks = undefined) {
 
     timerService.initialize(timerDisplay)
     updateFlagsCountDisplay()
-    addMines(setting.mines)
+  }
 
+  /**
+   * Paint the events from a core move, and drive the win/loss transition. Fired
+   * synchronously by the LocalTransport; a RemoteTransport would fire it on the
+   * server's reply with no change here.
+   * @param {{ events: object[], view: object }} payload
+   */
+  function onCoreEvent(payload) {
+    renderEvents(grid, payload.events)
+    for (const ev of payload.events) {
+      if (ev.type === 'explode' || ev.type === 'win') {
+        finishGame(payload.view)
+        break
+      }
+    }
+  }
+
+  /** Terminal transition: reveal the board, update displays, fire gameDone. */
+  function finishGame(view) {
+    const won = view.phase === 'won'
+    if (won) {
+      grid.setAttribute('game-status', 'win')
+      updateFlagsCountDisplay(0)
+    } else {
+      flagsDisplay.innerHTML = '&#128561;'
+      grid.setAttribute('game-status', 'over')
+    }
+    revealBoard(grid, view, setting)
+    grid.setAttribute('game-status', 'done')
+
+    const time = timerService.stop()
+    const game = {
+      time,
+      status: won ? 'win' : 'loss',
+      level: setting.id,
+      time_stamp: new Date(),
+      isMobile
+    }
+
+    /**
+     * TODO: add hook after gameSession send back `game`
+     *   - for sending the game score to the db
+     */
+    hooks.gameDone(game)
   }
 
   function setBusy() {
@@ -255,8 +302,8 @@ const Minesweeper = function(appId, version, hooks = undefined) {
   }
 
   /**
-   * 
-   * @param {HTMLTableCellElement} cell 
+   *
+   * @param {HTMLTableCellElement} cell
    */
   function initializeTouchEventHandlers(cell) {
     let ontouchleave = function() {
@@ -332,7 +379,7 @@ const Minesweeper = function(appId, version, hooks = undefined) {
     resetMouseEventFlags()
 
     // Set grid status to active on first click
-    cell.onmouseup = function(e) {        
+    cell.onmouseup = function(e) {
       pressed = undefined
       let dont = false
 
@@ -403,11 +450,6 @@ const Minesweeper = function(appId, version, hooks = undefined) {
     cell.onmousemove = function(e) {
       if ((pressed || bothPressed) && typeof e === 'object') {
         removeHighlights()
-        /*
-                if (!isEqual(clickedCell, cell)) {
-                    clickedCell = undefined;
-                }
-                */
         if (pressed == 'middle' || (isLeft && isRight)) {
           highlightSurroundingCell(this)
         } else if (pressed == 'left') {
@@ -456,187 +498,6 @@ const Minesweeper = function(appId, version, hooks = undefined) {
     skip = true
   }
 
-  function addMines(minesCount) {
-    //Add mines randomly
-    for (let i=0; i<minesCount; i++) {
-      let row = Math.floor(Math.random() * setting.rows)
-      let col = Math.floor(Math.random() * setting.cols)
-      let cell = grid.rows[row].cells[col]
-      if (isMine(cell)) {
-        transferMine()
-      } else {
-        mines.add(mineKey(row, col))
-      }
-      if (TEST_MODE){
-        cell.innerHTML = 'X'
-      }
-    }
-    if (TEST_MODE) {
-      printMines()
-    }
-  }
-
-  function revealMines() {
-    if (grid.getAttribute('game-status') == 'done') return
-    //Highlight all mines in red
-    const win = grid.getAttribute('game-status') == 'win'
-    for (let i=0; i<setting.rows; i++) {
-      for(let j=0; j<setting.cols; j++) {
-        let cell = grid.rows[i].cells[j]
-        if (win) {
-          handleWinRevelation(cell)
-        } else {
-          handleLostRevelation(cell)
-        }
-      }
-    }
-    grid.setAttribute('game-status', 'done')
-
-    const time = timerService.stop()
-    const game = {
-      time,
-      status: win ? 'win' : 'loss',
-      level: setting.id,
-      time_stamp: new Date(),
-      isMobile
-    }
-
-    /**
-     * TODO: add hook after gameSession send back `game`
-     *   - for sending the game score to the db
-     */
-    hooks.gameDone(game)
-
-  }
-
-  function handleWinRevelation(cell) {
-    updateFlagsCountDisplay(0)
-    if (isMine(cell)) {
-      cell.innerHTML = ':)'
-      cell.className = 'correct'
-      setStatus(cell, 'clicked')
-      let correct = document.createAttribute('title')
-      correct.value = 'Correct'
-      cell.setAttributeNode(correct)
-      setStatus(cell, 'clicked')
-    }
-  }
-
-  function handleLostRevelation(cell) {
-    if (isFlagged(cell)) {
-      cell.className = 'flag'
-      if (!isMine(cell)) {
-        cell.innerHTML = 'X'
-        cell.className = 'wrong'
-        let wrong = document.createAttribute('title')
-        wrong.value = 'Wrong'
-        cell.setAttributeNode(wrong)
-      } else {
-        cell.innerHTML = ':)'
-        cell.className = 'correct'
-        let correct = document.createAttribute('title')
-        correct.value = 'Correct'
-        cell.setAttributeNode(correct)
-      }
-    } else {
-      if (isMine(cell)) {
-        cell.className = 'mine'
-        setStatus(cell, 'clicked')
-      }
-    }
-  }
-
-  function isOpen(cell) {
-    return cell.innerHTML !== '' && !isFlagged(cell)
-  }
-
-  function isFlagged(cell) {
-    return getStatus(cell) == 'flagged'
-  }
-
-  function mineKey(row, col) {
-    return row * setting.cols + col
-  }
-
-  function isMine(cell) {
-    return mines.has(mineKey(getRow(cell), getCol(cell)))
-  }
-
-  function checkLevelCompletion() {
-    const safeCells = setting.rows * setting.cols - setting.mines
-    if (revealedSafeCount >= safeCells && grid.getAttribute('game-status') == 'active') {
-      grid.setAttribute('game-status', 'win')
-      revealMines()
-    }
-  }
-
-  function setStatus(cell, status) {
-    cell.setAttribute('data-status', status)
-  }
-
-  function getCol(cell) {
-    return cell.cellIndex
-  }
-
-  function getRow(cell) {
-    return cell.parentNode.rowIndex
-  }
-
-  function getStatus(cell) {
-    if (!cell) return undefined
-    return cell.getAttribute('data-status')
-  }
-
-  function middleClickCell(cell) {
-    if (grid.getAttribute('game-status') != 'active' || getStatus(cell) !== 'clicked') {
-      return
-    }
-    // check for number of surrounding flags
-    const valueString = cell.getAttribute('data-value')
-    let cellValue = parseInt(valueString, 10)
-    let flagCount = countFlagsAround(cell)
-
-    if (flagCount === cellValue) {
-      clickSurrounding(cell)
-      if (TEST_MODE) loggerService.debug('middle click', cell)
-    }
-  }
-
-  function countFlagsAround(cell) {
-    let flagCount = 0
-    let cellRow = cell.parentNode.rowIndex
-    let cellCol = cell.cellIndex
-    for (let i = Math.max(cellRow-1,0); i <= Math.min(cellRow+1, setting.rows - 1); i++) {
-      for(let j = Math.max(cellCol-1,0); j <= Math.min(cellCol+1, setting.cols - 1); j++) {
-        if (isFlagged(grid.rows[i].cells[j])) flagCount++
-      }
-    }
-    return flagCount
-  }
-
-  function clickSurrounding(cell) {
-    if (grid.getAttribute('game-status') != 'active') return
-    let cellRow = cell.parentNode.rowIndex
-    let cellCol = cell.cellIndex
-    for (let i = Math.max(cellRow-1,0); i <= Math.min(cellRow+1, setting.rows - 1); i++) {
-      for(let j = Math.max(cellCol-1,0); j <= Math.min(cellCol+1, setting.cols - 1); j++) {
-        let currentCell = grid.rows[i].cells[j]
-        if (getStatus(currentCell) == 'flagged') continue
-        openCell(currentCell)
-      }
-    }
-  }
-
-  function increaseFlagsCount() {
-    flagsCount++
-    updateFlagsCountDisplay()
-  }
-
-  function decreaseFlagsCount() {
-    flagsCount--
-    updateFlagsCountDisplay()
-  }
-
   function activateGame() {
     grid.setAttribute('game-status', 'active')
     // start timer
@@ -659,7 +520,7 @@ const Minesweeper = function(appId, version, hooks = undefined) {
   function highlightCell(cell) {
     if (isFlagged(cell)) return
     if (!gameIsDone() && getStatus(cell) == 'default') {
-      setStatus(cell, 'highlighted') // currentCell.classList.add('highlight');
+      setStatus(cell, 'highlighted')
       highlightedCells.push(cell)
     }
   }
@@ -677,27 +538,60 @@ const Minesweeper = function(appId, version, hooks = undefined) {
     }
   }
 
+  function increaseFlagsCount() {
+    flagsCount++
+    updateFlagsCountDisplay()
+  }
+
+  function decreaseFlagsCount() {
+    flagsCount--
+    updateFlagsCountDisplay()
+  }
+
+  function isFlagged(cell) {
+    return getStatus(cell) == 'flagged'
+  }
+
+  function setStatus(cell, status) {
+    cell.setAttribute('data-status', status)
+  }
+
+  function getCol(cell) {
+    return cell.cellIndex
+  }
+
+  function getRow(cell) {
+    return cell.parentNode.rowIndex
+  }
+
+  function getStatus(cell) {
+    if (!cell) return undefined
+    return cell.getAttribute('data-status')
+  }
+
+  // ---- input → core move adapters ----
+
   function rightClickCell(cell) {
     if (isFlagged(cell)) setBusy()
     if (grid.getAttribute('game-status') == 'inactive') {
       activateGame()
     }
     if (grid.getAttribute('game-status') != 'active') return
-    if (getStatus(cell) != 'clicked' && getStatus(cell) != 'empty') {
-      if (getStatus(cell) == 'default' || getStatus(cell) == 'highlighted') {
-        if (flagsCount <= 0) return
-        cell.className = 'flag'
-        decreaseFlagsCount()
-        setStatus(cell, 'flagged')
-      } else {
-        cell.className = ''
-        increaseFlagsCount()
-        setStatus(cell, 'default')
-      }
-      if ('vibrate' in navigator) {
-        navigator.vibrate(100)
-      }
-      if (TEST_MODE) loggerService.debug('right click', cell)
+
+    const status = getStatus(cell)
+    if (status == 'clicked' || status == 'empty') return
+
+    const move = { type: 'flag', r: getRow(cell), c: getCol(cell) }
+    if (status == 'default' || status == 'highlighted') {
+      if (flagsCount <= 0) return
+      transport.send(move) // renderer paints the flag
+      decreaseFlagsCount()
+    } else {
+      transport.send(move) // toggles the flag off
+      increaseFlagsCount()
+    }
+    if ('vibrate' in navigator) {
+      navigator.vibrate(100)
     }
   }
 
@@ -707,164 +601,26 @@ const Minesweeper = function(appId, version, hooks = undefined) {
       activateGame()
     }
     if (grid.getAttribute('game-status') != 'active') return
-    //Check if the end-user clicked on a mine
-    if (TEST_MODE) loggerService.debug('click', cell)
-    if (getStatus(cell) == 'flagged' || grid.getAttribute('game-status') == 'over') {
-      return
-    } else if (getStatus(cell) == 'clicked') {
-      middleClickCell(cell)
-      return
-    } else if (isMine(cell) && firstClick) {
-      // cell.setAttribute('data-mine', 'false');
-      mines.delete(mineKey(getRow(cell), getCol(cell)))
-      transferMine(cell)
-      if (TEST_MODE) printMines()
-    }
-
-    openCell(cell)
-  }
-
-  function printMines() {
-    let count = 0
-    for (let i = 0; i < setting.rows; i++) {
-      for (let j = 0; j < setting.cols; j++) {
-        if (isMine(grid.rows[i].cells[j])) {
-          loggerService.debug(count++ + ' - mine: [' + i + ',' + j + ']')
-        }
-      }
-    }
-  }
-
-  function transferMine(cell = undefined) {
-    let found = false
-    do {
-      let row = Math.floor(Math.random() * setting.rows)
-      let col = Math.floor(Math.random() * setting.cols)
-      const transferMineToCell = grid.rows[row].cells[col]
-      if (isMine(transferMineToCell) || transferMineToCell === cell || isNeighbor(cell, transferMineToCell)) {
-        continue
-      } else {
-        mines.add(mineKey(row, col))
-        if (TEST_MODE){
-          transferMineToCell.innerHTML = 'X'
-          if (TEST_MODE) loggerService.debug('transferred mine to: ' + row + ', ' + col)
-        }
-        // TODO: refactor maybe
-        // eslint-disable-next-line no-useless-assignment
-        found = true
-        return
-      }
-    } while(!found)
-  }
-
-  function isNeighbor(cell, nextCell) {
-    if (cell === undefined) {
-      return
-    }
-    const rowDifference = Math.abs(getRow(cell) - getRow(nextCell))
-    const colDifference = Math.abs(getCol(cell) - getCol(nextCell))
-
-    return (rowDifference === 1) && (colDifference === 1)
-  }
-
-  function countMinesAround(cell) {
-    let mineCount=0
-    let cellRow = cell.parentNode.rowIndex
-    let cellCol = cell.cellIndex
-    for (let i = Math.max(cellRow-1,0); i <= Math.min(cellRow+1,setting.rows-1); i++) {
-      const rows = grid.rows[i]
-      if (!rows) continue
-      for(let j = Math.max(cellCol-1,0); j <= Math.min(cellCol+1,setting.cols-1); j++) {
-        const cell = rows.cells[j] 
-        const mine = isMine(cell)
-        if (cell && mine) {
-          mineCount++
-        }
-      }
-    }
-    return mineCount
-  }
-
-  function updateCellValue(cell, value) {
-    const spanElement = document.createElement('span')
-    spanElement.innerHTML = value
-    cell.innerHTML = ''
-    cell.appendChild(spanElement)
-  }
-
-  /**
-   * Reveal a single known-non-mine cell. Returns true when the cell is blank
-   * (no adjacent mines), which is the signal to keep flooding from it.
-   * @param {HTMLTableCellElement} cell
-   */
-  function revealSafeCell(cell) {
-    // A cell can be re-opened via chording, so only count the first reveal
-    const wasOpen = getStatus(cell) == 'clicked' || getStatus(cell) == 'empty'
-    cell.className = 'clicked'
-    setStatus(cell, 'clicked')
-    if (!wasOpen) revealedSafeCount++
-
-    const mineCount = countMinesAround(cell)
-    if (mineCount == 0) {
-      updateCellValue(cell, ' ')
-      setStatus(cell, 'empty')
-      return true
-    }
-
-    updateCellValue(cell, mineCount.toString())
-    const dataValue = document.createAttribute('data-value')
-    dataValue.value = mineCount.toString()
-    cell.setAttributeNode(dataValue)
-    return false
-  }
-
-  /**
-   * Iteratively reveal the connected region of blank cells, starting from a
-   * cell that has already been revealed as blank. Uses an explicit queue with
-   * isOpen() as the visited guard instead of recursing back through clickCell,
-   * so there are no redundant per-cell checks and no deep call stack.
-   * @param {HTMLTableCellElement} startCell
-   */
-  function handleEmpty(startCell) {
-    const queue = [startCell]
-    while (queue.length) {
-      const cell = queue.shift()
-      const cellRow = cell.parentNode.rowIndex
-      const cellCol = cell.cellIndex
-      for (let i = Math.max(cellRow-1,0); i <= Math.min(cellRow+1, setting.rows - 1); i++) {
-        const rows = grid.rows[i]
-        if (!rows) continue
-        for (let j = Math.max(cellCol-1,0); j <= Math.min(cellCol+1, setting.cols - 1); j++) {
-          const neighbor = rows.cells[j]
-          if (!neighbor || neighbor === cell) continue
-          if (isFlagged(neighbor)) {
-            setBusy()
-            continue
-          }
-          if (isOpen(neighbor)) continue
-          // blank cells have no adjacent mines, so every neighbor here is safe
-          if (revealSafeCell(neighbor)) queue.push(neighbor)
-        }
-      }
-    }
-  }
-
-  function openCell(cell) {
-    if (grid.getAttribute('game-status') != 'active') return
-
-    firstClick = false
-
-    if (isMine(cell)) {
-      cell.className = 'clicked'
-      setStatus(cell, 'clicked')
-      revealMines()
-      flagsDisplay.innerHTML = '&#128561;'
-      grid.setAttribute('game-status', 'over')
+    if (isFlagged(cell) || grid.getAttribute('game-status') == 'over') {
       return
     }
 
-    if (revealSafeCell(cell)) handleEmpty(cell)
-    checkLevelCompletion()
+    const r = getRow(cell)
+    const c = getCol(cell)
+    // An already-open number chords; anything else is a reveal. The core places
+    // mines on the first reveal (first-click safe), so no transfer is needed.
+    if (getStatus(cell) == 'clicked') {
+      transport.send({ type: 'chord', r, c })
+      return
+    }
+    transport.send({ type: 'reveal', r, c })
+  }
+
+  function middleClickCell(cell) {
+    if (grid.getAttribute('game-status') != 'active' || getStatus(cell) !== 'clicked') {
+      return
+    }
+    transport.send({ type: 'chord', r: getRow(cell), c: getCol(cell) })
   }
 }
 

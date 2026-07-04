@@ -45,11 +45,14 @@ packages/mnswpr/                 # @ayo-run/mnswpr — ONE published package
       rules.js                   #     GameRules impl: init/apply/status/project
       board.js                   #     deterministic board gen + first-click safety
       reveal.js                  #     flood-fill, chording
-  client/                        # DOM client internals (consume ./core) — added in migration
-    renderer.js                  #   events → DOM (the ONLY place document is touched)
-    input-adapter.js             #   gestures → Move intents
-    transport.js                 #   LocalTransport (RemoteTransport added later)
-    timer-view.js
+  client/                        # DOM client internals (consume ./core)
+    renderer.js                  #   events → DOM (the ONLY place document is touched) — EXTRACTED
+    transport.js                 #   LocalTransport (RemoteTransport added later) — EXTRACTED
+    # Decision: the input state machine (mouse/touch/chording/long-press) and the
+    # timer stay INLINE in mnswpr.js for now — not extracted to input-adapter.js /
+    # timer-view.js. The input code is intricate and under-tested (no chord/touch/
+    # middle-click coverage yet), so extraction is deferred until those
+    # characterization tests exist or a concrete need arises. See §9.
 ```
 
 `package.json` `exports` (sub-path is the only surface change consumers see):

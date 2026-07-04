@@ -1,5 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import Minesweeper from '../mnswpr.js'
+import { MinesweeperRules } from '../core/index.js'
+
+// Ask the (deterministic) core for a seed whose first-click-safe board places
+// the single mine at `targetCol`. Lets the DOM tests below pin a layout honestly
+// via the client's `seed` option, instead of hoping a Math.random value lands it.
+function findSeedForMine(setting, firstClick, targetCol) {
+  for (let seed = 1; seed < 100000; seed++) {
+    const state = MinesweeperRules.init(seed, setting)
+    MinesweeperRules.apply(state, { type: 'reveal', r: firstClick.r, c: firstClick.c })
+    let mineCol = -1
+    state.grid.forEach((cell, r, c) => { if (cell.mine) mineCol = c })
+    if (mineCol === targetCol) return seed
+  }
+  throw new Error('no seed found for target mine column')
+}
 
 // Build a fresh board mounted on #app and return its grid <table>.
 function mountGame() {
@@ -38,11 +53,12 @@ describe('Minesweeper board', () => {
     vi.restoreAllMocks()
   })
 
-  // Mount a game on a custom board injected via the cached 'setting' localStorage key.
-  function mountCustomGame(setting, hooks) {
+  // Mount a game on a custom board injected via the cached 'setting' localStorage
+  // key. `options.seed` pins the (deterministic) mine layout.
+  function mountCustomGame(setting, hooks, options) {
     localStorage.setItem('setting', JSON.stringify(setting))
     document.body.innerHTML = '<div id="app"></div>'
-    const game = new Minesweeper('app', 'dev', hooks)
+    const game = new Minesweeper('app', 'dev', hooks, options)
     game.initialize()
     return document.getElementById('grid')
   }
@@ -143,25 +159,27 @@ describe('Minesweeper board', () => {
   })
 
   it('does not declare a win until the last safe cell is revealed', () => {
-    // 1x3 board with the single mine pinned to the middle column.
-    vi.spyOn(Math, 'random').mockReturnValue(0.5)
-    const grid = mountCustomGame({ rows: 1, cols: 3, mines: 1, id: 'test', name: 'test' })
+    // 1x3 board; pin the single mine to the middle column so neither end cascades.
+    const setting = { rows: 1, cols: 3, mines: 1, id: 'test', name: 'test' }
+    const seed = findSeedForMine(setting, { r: 0, c: 0 }, 1)
+    const grid = mountCustomGame(setting, undefined, { seed })
 
-    // First safe cell: adjacent to the mine, shows "1", no cascade -> not yet won.
+    // First safe cell (col 0): adjacent to the mine, shows "1", no cascade -> not yet won.
     leftClick(grid.rows[0].cells[0])
     expect(grid.getAttribute('game-status')).toBe('active')
 
-    // Revealing the remaining safe cell completes the board.
+    // Revealing the remaining safe cell (col 2) completes the board.
     leftClick(grid.rows[0].cells[2])
     expect(grid.getAttribute('game-status')).toBe('done')
   })
 
   it('flood fill stops at a flagged cell and never reveals it', () => {
-    // 1x4 board with the mine pinned to the last column.
-    vi.spyOn(Math, 'random').mockReturnValue(0.99)
-    const grid = mountCustomGame({ rows: 1, cols: 4, mines: 1, id: 'test', name: 'test' })
+    // 1x4 board; pin the mine to the last column so cols 0-2 are a safe run.
+    const setting = { rows: 1, cols: 4, mines: 1, id: 'test', name: 'test' }
+    const seed = findSeedForMine(setting, { r: 0, c: 0 }, 3)
+    const grid = mountCustomGame(setting, undefined, { seed })
 
-    // Flag a safe cell sitting between the blank region and the mine.
+    // Flag a safe cell (col 2) sitting between the blank region and the mine.
     // (full press + release so the internal right-button flag resets)
     const flag = grid.rows[0].cells[2]
     flag.dispatchEvent(new MouseEvent('mousedown', { button: 2, bubbles: true }))
