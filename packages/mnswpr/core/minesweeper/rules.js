@@ -1,5 +1,6 @@
 // @ts-check
 import { Grid } from '../grid/grid.js'
+import { toJSON as gridToJSON, fromJSON as gridFromJSON } from '../grid/serialize.js'
 import { eightWay } from '../grid/neighbors.js'
 import { placeMines, excludeAround, validateLayout } from './board.js'
 import { floodReveal, countFlagsAround, allMines } from './reveal.js'
@@ -126,7 +127,8 @@ function project(state) {
 
 /**
  * The GameRules contract consumed by GameSession/replay: init / apply / status /
- * project. Deterministic and DOM-free.
+ * project, plus serialize / deserialize for snapshotting. Deterministic and
+ * DOM-free.
  */
 export const MinesweeperRules = {
   /**
@@ -196,5 +198,44 @@ export const MinesweeperRules = {
     }
   },
 
-  project
+  project,
+
+  /**
+   * Snapshot a game state as a plain, JSON-safe object: the whole board (every
+   * cell's mine/adjacent/status, via the Layer-0 grid serializer) plus phase and
+   * progress. Inverse of {@link deserialize}. The `grid` instance is the only
+   * non-JSON-safe field of `State`; everything else (seed, config, flags) is
+   * already plain data.
+   *
+   * @param {State} state
+   * @returns {{ seed: number, config: Config, phase: Phase, minesPlaced: boolean, revealedSafe: number, grid: { rows: number, cols: number, cells: Cell[] } }}
+   */
+  serialize(state) {
+    return {
+      seed: state.seed,
+      config: state.config,
+      phase: state.phase,
+      minesPlaced: state.minesPlaced,
+      revealedSafe: state.revealedSafe,
+      grid: gridToJSON(state.grid)
+    }
+  },
+
+  /**
+   * Rebuild a game state from {@link serialize} output (or its JSON round-trip).
+   * Cells are cloned so the revived state shares no references with the snapshot.
+   *
+   * @param {ReturnType<typeof MinesweeperRules.serialize>} snap
+   * @returns {State}
+   */
+  deserialize(snap) {
+    return {
+      seed: snap.seed,
+      config: snap.config,
+      phase: snap.phase,
+      minesPlaced: snap.minesPlaced,
+      revealedSafe: snap.revealedSafe,
+      grid: gridFromJSON(snap.grid, cell => ({ ...cell }))
+    }
+  }
 }

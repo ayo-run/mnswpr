@@ -7,7 +7,7 @@
  * server's clock (authoritative). The session never calls a wall clock itself.
  * Future home: @cozy-games/game-session.
  *
- * @typedef {{ init: Function, apply: Function, status: Function, project: Function }} Rules
+ * @typedef {{ init: Function, apply: Function, status: Function, project: Function, serialize?: Function, deserialize?: Function }} Rules
  */
 export class GameSession {
   /**
@@ -73,5 +73,48 @@ export class GameSession {
     const status = this.status()
     if (status !== 'won' && status !== 'lost') return null
     return { status, time: this.elapsed(), seed: this.state.seed, config: this.state.config, log: this.log() }
+  }
+
+  /**
+   * Full, JSON-safe snapshot of the whole session — game state (board + per-cell
+   * status, via the rules' own serializer) plus the move log and timing anchors
+   * (`t0`/`tEnd`) that `elapsed()` derives from. Everything needed to later resume
+   * (core-05); the live `clock` is deliberately excluded (it's re-injected on
+   * {@link GameSession.deserialize}). Requires the rules to implement `serialize`.
+   *
+   * @returns {{ state: object, log: Array<{ move: object, t: number }>, t0: number | null, tEnd: number | null }}
+   */
+  serialize() {
+    if (typeof this.rules.serialize !== 'function') {
+      throw new TypeError('GameSession.serialize: rules must implement serialize(state)')
+    }
+    return {
+      state: this.rules.serialize(this.state),
+      log: this._log.map(({ move, t }) => ({ move, t })),
+      t0: this._t0,
+      tEnd: this._tEnd
+    }
+  }
+
+  /**
+   * Rebuild a session from a {@link serialize} snapshot (or its JSON round-trip).
+   * The clock is re-injected — it's a live function, not serializable — while the
+   * log and timing anchors are restored so `elapsed()` resumes correctly.
+   * Requires the rules to implement `deserialize`.
+   *
+   * @param {Rules} rules
+   * @param {{ state: object, log: Array<{ move: object, t: number }>, t0: number | null, tEnd: number | null }} snapshot
+   * @param {{ clock?: () => number }} [opts]
+   * @returns {GameSession}
+   */
+  static deserialize(rules, snapshot, { clock = () => 0 } = {}) {
+    if (typeof rules.deserialize !== 'function') {
+      throw new TypeError('GameSession.deserialize: rules must implement deserialize(snapshot)')
+    }
+    const session = new GameSession(rules, { state: rules.deserialize(snapshot.state), clock })
+    session._log = snapshot.log.map(({ move, t }) => ({ move, t }))
+    session._t0 = snapshot.t0
+    session._tEnd = snapshot.tEnd
+    return session
   }
 }

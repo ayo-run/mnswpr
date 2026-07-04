@@ -355,6 +355,101 @@ describe('board injection (fromLayout, Layer 2)', () => {
   })
 })
 
+describe('state serialization (serialize / deserialize)', () => {
+  // Drive a fresh session to a genuine MID-GAME state: opening flood + a flag on
+  // a mine (which stays flagged and never needs revealing to win). Returns the
+  // session, its clock, and the flagged mine's coordinates.
+  function midGame(seed = 21) {
+    const clock = makeClock()
+    const session = new GameSession(MinesweeperRules, { seed, config: beginner, clock })
+    clock.tick()
+    session.applyMove({ type: 'reveal', r: 0, c: 0 }) // opening flood → active
+    const mine = firstMine(session.state.grid)
+    clock.tick()
+    session.applyMove({ type: 'flag', r: mine.r, c: mine.c })
+    return { session, clock, mine }
+  }
+
+  it('round-trips a mid-game snapshot through JSON without loss', () => {
+    const { session } = midGame()
+    expect(session.status()).toBe('active') // genuinely mid-game, not fresh/finished
+
+    const snap = session.serialize()
+    const roundTripped = JSON.parse(JSON.stringify(snap))
+    expect(roundTripped).toEqual(snap) // JSON-safe: stringify → parse is lossless
+
+    // deserialize → re-serialize reproduces the exact snapshot
+    const revived = GameSession.deserialize(MinesweeperRules, roundTripped, { clock: makeClock() })
+    expect(revived.serialize()).toEqual(snap)
+  })
+
+  it('snapshot covers layout, revealed + flagged cells, and session/clock state', () => {
+    const { session, mine } = midGame()
+    const snap = session.serialize()
+
+    // board layout
+    expect(snap.state.grid.rows).toBe(beginner.rows)
+    expect(snap.state.grid.cols).toBe(beginner.cols)
+    expect(snap.state.grid.cells).toHaveLength(beginner.rows * beginner.cols)
+    expect(snap.state.grid.cells[0]).toEqual({ mine: expect.any(Boolean), adjacent: expect.any(Number), status: expect.any(String) })
+
+    // per-cell state: the flood left revealed cells, and our flagged mine is flagged
+    expect(snap.state.grid.cells.some(c => c.status === 'revealed')).toBe(true)
+    expect(snap.state.grid.cells[mine.r * beginner.cols + mine.c].status).toBe('flagged')
+
+    // session / clock state: timer started (t0 set), still running (tEnd null), log intact
+    expect(snap.t0).not.toBeNull()
+    expect(snap.tEnd).toBeNull()
+    expect(snap.log).toHaveLength(2)
+    expect(snap.log[0]).toEqual({ move: { type: 'reveal', r: 0, c: 0 }, t: expect.any(Number) })
+  })
+
+  it('a deserialized session resumes and plays identically to the original', () => {
+    const playToWin = (session, clock) => {
+      const { grid, config } = session.state
+      for (let r = 0; r < config.rows; r++) {
+        for (let c = 0; c < config.cols; c++) {
+          if (!grid.at(r, c).mine && grid.at(r, c).status !== 'revealed') {
+            clock.tick()
+            session.applyMove({ type: 'reveal', r, c })
+          }
+        }
+      }
+    }
+
+    const { session, clock } = midGame(33)
+    const snap = session.serialize()
+    // Revive on a clock continuing from the same instant, so timing stays aligned.
+    const reviveClock = makeClock(clock())
+    const revived = GameSession.deserialize(MinesweeperRules, JSON.parse(JSON.stringify(snap)), { clock: reviveClock })
+
+    playToWin(session, clock)
+    playToWin(revived, reviveClock)
+
+    expect(revived.status()).toBe(session.status())
+    expect(revived.status()).toBe('won')
+    expect(revived.view()).toEqual(session.view())
+    expect(revived.elapsed()).toBe(session.elapsed())
+    expect(revived.result()).toEqual(session.result())
+  })
+
+  it('rules.serialize / deserialize round-trips a state and revives a real Grid', () => {
+    const state = MinesweeperRules.init(7, beginner)
+    MinesweeperRules.apply(state, { type: 'reveal', r: 0, c: 0 })
+    const snap = MinesweeperRules.serialize(state)
+    const revived = MinesweeperRules.deserialize(JSON.parse(JSON.stringify(snap)))
+    expect(revived.grid).toBeInstanceOf(Grid) // not a plain object — a live Grid
+    expect(revived.grid.at(0, 0)).toEqual(state.grid.at(0, 0))
+    expect(MinesweeperRules.serialize(revived)).toEqual(snap)
+  })
+
+  it('serialize throws clearly when the rules lack a serializer', () => {
+    const bareRules = { init: () => ({}), apply: s => ({ state: s, events: [] }), status: () => 'fresh', project: s => s }
+    const session = new GameSession(bareRules, { state: {} })
+    expect(() => session.serialize()).toThrow(TypeError)
+  })
+})
+
 describe('session + timing (Layer 1)', () => {
   it('reports authoritative elapsed time from the injected clock', () => {
     const clock = makeClock()
@@ -438,8 +533,8 @@ describe('determinism guard (invariant #4)', () => {
 
 // ---- helpers ----
 
-function makeClock() {
-  let t = 1000
+function makeClock(start = 1000) {
+  let t = start
   return Object.assign(() => t, { tick() { t += 50 } })
 }
 
