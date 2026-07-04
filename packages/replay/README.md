@@ -97,6 +97,35 @@ offset `<= t`:
 
 No event is ever delivered twice for a single forward pass, and none is dropped.
 
+## Schema-version dispatch
+
+One engine build replays envelopes from multiple format generations. On
+construction the envelope is routed by its `schema_version` through a dispatch
+table to a version-specific **reader** that normalizes it into the canonical
+`MoveEvent` records the engine plays:
+
+```js
+readEnvelope(envelope)            // → canonical records, or throws
+```
+
+- **v1** is the only built-in reader today (the canonical format itself).
+- **Unknown versions fail loudly** — never a silent best-effort parse:
+
+  ```
+  readEnvelope: unsupported envelope schema_version 99 (supported: 1)
+  ```
+
+- **Adding a generation is one entry.** Register a reader for this instance via
+  the `readers` option (or add to the built-in table for a permanent version):
+
+  ```js
+  const v2 = (env) => env.log.map(e => ({ seq: e.n, t: e.ts, event: e.payload }))
+  new PlaybackClock(v2Envelope, {}, adapter, { readers: { 2: v2 } })
+  ```
+
+  Whatever a reader returns is validated as a canonical move log, so a
+  half-normalized generation can never reach the engine.
+
 ## Invariant: envelope only, no game types
 
 This module imports **only** `@cozy-games/move-log` (to validate the envelope) and
