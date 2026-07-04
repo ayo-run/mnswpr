@@ -10,10 +10,9 @@ engine now — only structuring for it.
 Goals, in priority order:
 
 1. **Headless core** — game state is a plain data model, no DOM, no wall clock.
-2. **Server-authoritative capable** — the same core can run on a server that owns
-   the RNG, the clock, and the move sequence, so leaderboard times are witnessed,
-   not claimed — closing the gap where a client can otherwise report any finish
-   time it likes.
+2. **Authoritative-host capable** — the same core can run on a host that owns
+   the RNG, the clock, and the move sequence, so game state and timing can be
+   computed by an authoritative host rather than solely on the client.
 3. **Backwards compatible** — the existing DOM UI, CSS, and jsdom tests keep
    working; today's offline play is just "the core with a local transport."
 4. **Extraction-ready** — a clean seam between generic (grid/session) and
@@ -41,7 +40,7 @@ packages/mnswpr/                 # @ayo-run/mnswpr — ONE published package
     session/                     #   Layer 1  → future @cozy-games/game-session
       session.js                 #     GameSession: lifecycle, injected clock, move log
       rng.js                     #     seedable deterministic PRNG (mulberry32)
-      replay.js                  #     replay(rules, {seed, config, log}) → verify
+      replay.js                  #     replay(rules, {seed, config, log}) → validate
     minesweeper/                 #   Layer 2  → Minesweeper-specific rules
       rules.js                   #     GameRules impl: init/apply/status/project
       board.js                   #     deterministic board gen + first-click safety
@@ -120,9 +119,9 @@ session for the move log and by the server for persistence/replay.
 
 ---
 
-## 3. Layer 1 — generic session & authority (`session/`)
+## 3. Layer 1 — generic session & host authority (`session/`)
 
-The most reusable layer, and the one that makes server authority possible. It
+The most reusable layer, and the one that makes an authoritative host possible. It
 owns **lifecycle, time, and the move log**, and delegates game meaning to an
 injected `GameRules` object.
 
@@ -147,9 +146,9 @@ const GameRules = {
 class GameSession {
   /**
    * @param rules   a GameRules implementation
-   * @param opts.seed   number   — seeds board gen + RNG (server-held for authority)
+   * @param opts.seed   number   — seeds board gen + RNG (host-held when a host owns the session)
    * @param opts.config game config (level/difficulty)
-   * @param opts.clock  () => number — INJECTED time source (authority lives here)
+   * @param opts.clock  () => number — INJECTED time source (whoever runs the session owns it)
    */
   constructor(rules, opts)
 
@@ -166,27 +165,29 @@ class GameSession {
 Two decisions that unlock everything:
 
 - **Injected clock.** The session never calls `Date.now()`. The *caller* supplies
-  the clock. On the client it's `Date.now` (cosmetic). On the server it's the
-  server's clock — so `elapsed()` is authoritative and unforgeable.
+  the clock. On the client it's `Date.now`. On an authoritative host it's the
+  host's clock — so `elapsed()` is owned by whoever runs the session.
 - **Injected, seedable RNG** (`rng.js`, e.g. mulberry32 seeded by `opts.seed`).
   Board generation is a pure function of `seed` (+ first click), so a run is
-  **bit-for-bit reproducible**. The server holds the seed; the client never sees
-  it mid-game (or it could regenerate the board and cheat).
+  **bit-for-bit reproducible**. A host that owns the session holds the seed and
+  sends only projected views, so unrevealed board state need not be sent to the
+  client mid-game.
 
-### Replay-verify (`replay.js`)
+### Replay (`replay.js`)
 
 ```js
-// Re-runs a submitted game from scratch and returns the authoritative outcome.
-// The server uses this to VERIFY a client-submitted { seed, config, log }:
+// Re-runs a game from scratch from its recorded inputs and returns the
+// recomputed outcome. A host can use this to validate a submitted
+// { seed, config, log }:
 //   - does the log actually solve the board?
-//   - is the move timeline monotonic and within plausibility bounds?
-//   - does the recomputed time match the claimed time?
+//   - is the move timeline monotonic and within plausible bounds?
+//   - does the recomputed time match the recorded time?
 replay(rules, { seed, config, log }) // → { status, time, valid, reason? }
 ```
 
-This is the lighter "verifiable replay" anti-cheat path: no live per-move server
-needed — just call `replay()` in a Cloud Function at
-submit time. It requires exactly this headless core and nothing else.
+Because the core is deterministic, a full game can be reconstructed from its
+inputs alone — no live per-move host needed; `replay()` can run wherever a host
+processes a submission. It requires exactly this headless core and nothing else.
 
 > **Determinism is a hard rule for Layers 1–2:** no `Date.now()`, no
 > `Math.random()`, no `new Date()` inside core logic — all injected. This is what
@@ -232,7 +233,7 @@ Event =
 ```
 
 Emitting **deltas** (not full state) is what lets the client render incrementally
-*and* lets an authoritative server withhold the rest of the board.
+*and* lets an authoritative host withhold the rest of the board.
 
 ### First-click safety, done right
 
@@ -248,7 +249,7 @@ first click is provably safe, and generation stays a pure seed function.
 - Chording (ports the left+right behavior), returns a `reveal` or `explode`.
 - Win = every non-mine cell revealed. Loss = a mine revealed.
 
-### Hidden-information projection (`project.js`) — the authority crux
+### Hidden-information projection (`project.js`)
 
 ```js
 project(state) // → ClientView
@@ -257,9 +258,9 @@ project(state) // → ClientView
 Returns only what a client is allowed to know: revealed cells + their adjacency,
 flags, and phase. **Unrevealed mine positions are never included** (until a
 terminal `explode`/`win`, when the full board is disclosed for the reveal
-animation and verification). The server sends `view()` / event deltas — never the
-raw state, never the seed. A client therefore cannot see unrevealed mines even if
-it inspects every byte it receives.
+animation). A host sends `view()` / event deltas — never the raw state, never the
+seed. A client therefore cannot see unrevealed mines even if it inspects every
+byte it receives.
 
 ---
 
@@ -274,7 +275,7 @@ core state, not the owner of it. Four parts:
  (gestures → Move) ──▶ (Local | Remote) ──▶ Event[] ──▶ (deltas → DOM)   (time → DOM)
                           │
                           ├─ Local : in-process GameSession  (offline / npm engine)
-                          └─ Remote: HTTP/WS to server        (ranked / authoritative)
+                          └─ Remote: HTTP/WS to a host        (authoritative host)
 ```
 
 ### Transport — one interface, two implementations (mirrors the leaderboard adapter pattern)
@@ -290,11 +291,11 @@ Transport = {
 ```
 
 - **`LocalTransport`** wraps a `GameSession` with `clock = Date.now`. This is
-  today's behavior exactly: fast, offline, timing cosmetic (still spoofable — fine
-  for casual/offline and the standalone npm engine).
-- **`RemoteTransport`** forwards moves to the server, which holds the authoritative
-  `GameSession`, and streams back projected events. Timing is server-owned. Used
-  for ranked play; pair with **App Check** so only the real app can submit.
+  today's behavior exactly: fast, offline, timing owned by the client — fine for
+  offline play and the standalone npm engine.
+- **`RemoteTransport`** forwards moves to a host, which holds the authoritative
+  `GameSession`, and streams back projected events. Timing is host-owned. Used
+  when a game runs on an authoritative host.
 
 ### Renderer
 
@@ -318,9 +319,9 @@ porting it as "same gestures, different output" keeps the hard-won input feel.
   `transport`-reported time. In Remote mode it shows server time (optionally a
   locally-interpolated estimate reconciled on each server message).
 - The current `hooks.gameDone(game)` fires from the terminal event. In **Local**
-  mode the client builds `game` as today. In **Remote** mode the **server**
-  produces the authoritative `{ time, status }` and writes/sign the leaderboard
-  result — the client submits nothing it could forge. That is the whole point.
+  mode the client builds `game` as today. In **Remote** mode the **host**
+  produces the authoritative `{ time, status }` and records the leaderboard
+  result — the client renders it rather than computing it.
 
 The public constructor stays hook-shaped for compatibility, e.g.:
 
@@ -328,7 +329,7 @@ The public constructor stays hook-shaped for compatibility, e.g.:
 Minesweeper(appId, version, {
   transport: new LocalTransport({ level }),   // or RemoteTransport({ endpoint })
   levelChanged(setting) { … },
-  gameDone(game) { … }                         // Local: client-built; Remote: server-authoritative
+  gameDone(game) { … }                         // Local: client-built; Remote: host-authoritative
 })
 ```
 
@@ -336,18 +337,17 @@ Minesweeper(appId, version, {
 
 ## 6. Two run modes, one codebase
 
-| | **Local / offline** | **Server-authoritative** |
+| | **Local / offline** | **Authoritative host** |
 |---|---|---|
-| Where the core runs | in the browser | on the server |
-| Clock | `Date.now` (cosmetic) | server clock (authoritative) |
-| Board/seed | in browser | server-held, never sent |
+| Where the core runs | in the browser | on a host |
+| Clock | `Date.now` | host clock |
+| Board/seed | in browser | host-held, sent as rules allow |
 | Transport | `LocalTransport` | `RemoteTransport` |
-| Leaderboard trust | claimed (spoofable) | witnessed / verified |
-| Needs a server tier | no | yes (Function/Worker + session store) |
-| Use | offline play, published npm engine | ranked play |
+| Needs a host tier | no | yes (Function/Worker + session store) |
+| Use | offline play, published npm engine | host-owned sessions |
 
 The published `@ayo-run/mnswpr` stays fully functional standalone (Local mode).
-Ranked play opts into Remote. Same renderer, same input, same rules.
+Running on a host opts into Remote. Same renderer, same input, same rules.
 
 ---
 
@@ -364,13 +364,13 @@ are the disciplines that make the server additive rather than a rewrite:
    projected view out; plain JSON. Never hand the client a live `GameSession`,
    `Grid`, or `State`. *Violation:* nothing survives a network hop.
 3. **The Renderer consumes only `project(state)` + events** — never raw mine
-   positions, even offline where it technically has them. *Violation:* server mode
-   (which withholds the board) needs a renderer rewrite; board-secrecy stops being
-   a drop-in.
+   positions, even offline where it technically has them. *Violation:* host mode
+   (which withholds unrevealed board state) needs a renderer rewrite; hidden-
+   information projection stops being a drop-in.
 4. **The core is deterministic now** — seeded RNG + injected clock + a working
    `replay()`, even though offline play doesn't need them. *Violation:*
    retrofitting determinism into board generation later is a rewrite, and the
-   verify/authority path has no substrate.
+   replay/validation path has no substrate.
 5. **The client is stateless about rules.** All win/loss/reveal logic lives in the
    core; the client only renders. *Violation:* client-side rule shortcuts aren't
    authoritative on a server.
@@ -406,8 +406,8 @@ appear in `core/` outside the injected `clock`/`rng` seams.
 4. **Swap `apps/mnswpr/main.js`** to construct the client with `LocalTransport`.
    Behavior is identical to today — the existing jsdom tests (real DOM events on
    `#app`) are the regression harness and must stay green.
-5. **(Later) Remote.** Add a server runtime hosting `GameSession` authoritatively
-   + `RemoteTransport` + App Check; server writes verified scores.
+5. **(Later) Remote.** Add a host runtime running `GameSession` authoritatively
+   + `RemoteTransport`; the host records results.
 6. **(Later) Extract** `grid/` + `session/` into `@cozy-games/grid` +
    `@cozy-games/game-session` once Sudoku exists.
 
@@ -428,8 +428,8 @@ appear in `core/` outside the injected `clock`/`rng` seams.
 - **Package boundary:** ✅ *resolved* — one `@ayo-run/mnswpr` package, core at the
   `./core` sub-path (§1). Extraction to `@cozy-games/grid` + `@cozy-games/game-session`
   deferred to when Sudoku lands; the sub-path stays stable across that move.
-- **Enforcement level (verifiable-replay vs full authority):** *deferred.* Ship
-  offline-only for now (`LocalTransport`, cosmetic timing — matches today's UX).
+- **Host mode (replay-validation vs live authority):** *deferred.* Ship
+  offline-only for now (`LocalTransport`, client-owned timing — matches today's UX).
   The deterministic core + `replay()` are built now so either path is a later
   add-on, not a rewrite.
 - **Remote transport / server host / latency & cost:** *deferred* (offline-first).
