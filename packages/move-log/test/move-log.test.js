@@ -7,7 +7,8 @@ import { dirname, join } from 'node:path'
 // Imported via the PACKAGE NAME (not a relative path) to prove the workspace
 // module resolves and is importable by other packages.
 import {
-  createMoveLog, serializeMoveLog, deserializeMoveLog, isMoveLog, assertMoveLog, SCHEMA_VERSION
+  createMoveLog, withReceivedTs,
+  serializeMoveLog, deserializeMoveLog, isMoveLog, assertMoveLog, SCHEMA_VERSION
 } from '@cozy-games/move-log'
 
 // A REAL mnswpr session/event stream — imported by the TEST, never the module.
@@ -139,6 +140,89 @@ describe('serialization round-trip', () => {
     expect(assertMoveLog(log)).toBe(log)
     expect(isMoveLog(null)).toBe(false)
     expect(isMoveLog({ schema_version: 1, events: [{ seq: 1, t: 0 }] })).toBe(false)
+  })
+})
+
+describe('received timestamps (additive receivedTs)', () => {
+  const base = [
+    { seq: 1, t: 0, event: { type: 'reveal', r: 0, c: 0 } },
+    { seq: 2, t: 50, event: { type: 'flag', r: 1, c: 2 } }
+  ]
+
+  it('accepts an optional receivedTs per event and round-trips it', () => {
+    const log = createMoveLog([
+      { seq: 1, t: 0, event: { k: 'a' }, receivedTs: 1000 },
+      { seq: 2, t: 50, event: { k: 'b' }, receivedTs: 1060 }
+    ])
+    expect(log.events[0].receivedTs).toBe(1000)
+    const restored = deserializeMoveLog(serializeMoveLog(log))
+    expect(restored).toEqual(log)
+    expect(restored.events.map(e => e.receivedTs)).toEqual([1000, 1060])
+  })
+
+  it('is valid with receivedTs on only some events', () => {
+    const log = createMoveLog([
+      { seq: 1, t: 0, event: { k: 'a' }, receivedTs: 1000 },
+      { seq: 2, t: 50, event: { k: 'b' } } // no receivedTs
+    ])
+    expect(isMoveLog(log)).toBe(true)
+    expect('receivedTs' in log.events[1]).toBe(false)
+    expect(deserializeMoveLog(serializeMoveLog(log))).toEqual(log)
+  })
+
+  it('REGRESSION: a log with no receivedTs anywhere stays fully valid and leaks no key', () => {
+    const log = createMoveLog(base)
+    expect(isMoveLog(log)).toBe(true)
+    expect(log.events.every(e => !('receivedTs' in e))).toBe(true)
+    const restored = deserializeMoveLog(serializeMoveLog(log))
+    expect(restored).toEqual(log)
+    expect(restored.events.every(e => !('receivedTs' in e))).toBe(true)
+  })
+
+  it('rejects a non-finite / non-numeric receivedTs', () => {
+    expect(() => createMoveLog([{ seq: 1, t: 0, event: {}, receivedTs: 'soon' }])).toThrow(TypeError)
+    expect(() => createMoveLog([{ seq: 1, t: 0, event: {}, receivedTs: Infinity }])).toThrow(TypeError)
+    expect(() => deserializeMoveLog(JSON.stringify({
+      schema_version: 1,
+      events: [{ seq: 1, t: 0, event: {}, receivedTs: 'later' }]
+    }))).toThrow(TypeError)
+  })
+
+  it('withReceivedTs attaches host-received times additively without mutating the input', () => {
+    const log = createMoveLog(base)
+    let clock = 900
+    const stamped = withReceivedTs(log, () => (clock += 10))
+
+    // input untouched
+    expect(log.events.every(e => !('receivedTs' in e))).toBe(true)
+    // output stamped, still a valid v1 log, round-trips
+    expect(stamped.events.map(e => e.receivedTs)).toEqual([910, 920])
+    expect(stamped.schema_version).toBe(1)
+    expect(deserializeMoveLog(serializeMoveLog(stamped))).toEqual(stamped)
+  })
+
+  it('withReceivedTs leaves events unstamped when the stamp returns undefined', () => {
+    const log = createMoveLog(base)
+    const stamped = withReceivedTs(log, (e) => (e.seq === 1 ? 1234 : undefined))
+    expect(stamped.events[0].receivedTs).toBe(1234)
+    expect('receivedTs' in stamped.events[1]).toBe(false)
+    expect(isMoveLog(stamped)).toBe(true)
+  })
+
+  it('withReceivedTs rejects a stamp that returns a non-finite number', () => {
+    const log = createMoveLog(base)
+    expect(() => withReceivedTs(log, () => NaN)).toThrow(TypeError)
+  })
+
+  it('VERSIONING: receivedTs is additive — same schema_version with or without it', () => {
+    const without = createMoveLog(base)
+    const withRt = withReceivedTs(without, () => 1000)
+    expect(without.schema_version).toBe(SCHEMA_VERSION)
+    expect(withRt.schema_version).toBe(SCHEMA_VERSION)
+    expect(SCHEMA_VERSION).toBe(1)
+    // a v1 reader accepts both shapes
+    expect(isMoveLog(without)).toBe(true)
+    expect(isMoveLog(withRt)).toBe(true)
   })
 })
 

@@ -8,16 +8,23 @@
  *
  * This module imports NO game types — that independence is the whole point and
  * is enforced by a dependency-graph guard in the tests. The log owns the
- * per-event recording metadata (`seq` + `t`) so `T` can stay a pure game payload
- * with no required shape; the module never inspects the inside of an `event`.
+ * per-event recording metadata (`seq` + `t`, and an optional received-side
+ * `receivedTs`) so `T` can stay a pure game payload with no required shape; the
+ * module never inspects the inside of an `event`.
  *
  * Extraction to a standalone published package comes later; for now it lives as
  * a shared workspace module alongside `packages/utils`.
  */
 
 /**
- * The move-log schema version. Bump ONLY on a breaking change to the container
- * shape itself — never for changes to a game's `T` vocabulary.
+ * The move-log schema version.
+ *
+ * Versioning policy: OPTIONAL, purely additive fields (an event gaining an
+ * optional `receivedTs`, say) do NOT bump this — a v1 reader ignores fields it
+ * doesn't know, and a log written with them stays a valid v1 log. Bump ONLY on a
+ * breaking change to the container shape (a renamed/removed field, a newly
+ * *required* field), which would need dispatch on read. Never bump for changes
+ * to a game's `T` vocabulary.
  *
  * @typedef {1} SchemaVersion
  */
@@ -25,11 +32,14 @@ export const SCHEMA_VERSION = /** @type {SchemaVersion} */ (1)
 
 /**
  * A single recorded event: the log-owned recording metadata — a strictly
- * increasing sequence number `seq` and a timestamp `t` (milliseconds) — plus the
- * game's opaque payload `event`. Generic over the game's event type `T`.
+ * increasing sequence number `seq`, a source-side timestamp `t` (milliseconds),
+ * and an OPTIONAL received-side timestamp `receivedTs` a consumer may attach when
+ * it received the event — plus the game's opaque payload `event`. Generic over
+ * the game's event type `T`. `receivedTs` is purpose-neutral: the log records
+ * only THAT it was received at some time, never why or from where.
  *
  * @template T
- * @typedef {{ seq: number, t: number, event: T }} MoveEvent
+ * @typedef {{ seq: number, t: number, event: T, receivedTs?: number }} MoveEvent
  */
 
 /**
@@ -70,8 +80,27 @@ function assertEvents(events) {
     if (e.seq <= prevSeq) {
       throw new RangeError(`move-log: events[${i}].seq must be strictly increasing (got ${e.seq} after ${prevSeq})`)
     }
+    if (e.receivedTs !== undefined && (typeof e.receivedTs !== 'number' || !Number.isFinite(e.receivedTs))) {
+      throw new TypeError(`move-log: events[${i}].receivedTs must be a finite number when present (got ${JSON.stringify(e.receivedTs)})`)
+    }
     prevSeq = e.seq
   })
+}
+
+/**
+ * Copy one event record to the canonical field set, carrying `receivedTs`
+ * through only when it's actually present (so absent stays absent — no
+ * `receivedTs: undefined` keys leak into the log or its JSON).
+ *
+ * @template T
+ * @param {MoveEvent<T>} e
+ * @returns {MoveEvent<T>}
+ */
+function copyEvent(e) {
+  /** @type {MoveEvent<T>} */
+  const out = { seq: e.seq, t: e.t, event: e.event }
+  if (e.receivedTs !== undefined) out.receivedTs = e.receivedTs
+  return out
 }
 
 /**
@@ -101,15 +130,40 @@ export function assertMoveLog(value) {
  * entries are copied, so the log never aliases the caller's array.
  *
  * @template T
- * @param {MoveEvent<T>[]} [events] - ordered events, each `{ seq, t, event }`
+ * @param {MoveEvent<T>[]} [events] - ordered events, each `{ seq, t, event, receivedTs? }`
  * @returns {MoveLog<T>}
  */
 export function createMoveLog(events = []) {
   assertEvents(events)
   return {
     schema_version: SCHEMA_VERSION,
-    events: events.map(({ seq, t, event }) => ({ seq, t, event }))
+    events: events.map(copyEvent)
   }
+}
+
+/**
+ * Return a new move log with a received-side timestamp attached to each event
+ * for which `stamp` returns a finite number; events where `stamp` returns
+ * `undefined` are left as-is (keeping any existing `receivedTs`). This is how a
+ * consumer records WHEN it received events — the log never cares where the value
+ * came from. Pure: the input log is not mutated.
+ *
+ * @template T
+ * @param {MoveLog<T>} log
+ * @param {(event: MoveEvent<T>, index: number) => number | undefined} stamp
+ * @returns {MoveLog<T>}
+ */
+export function withReceivedTs(log, stamp) {
+  assertMoveLog(log)
+  const events = log.events.map((e, i) => {
+    const rt = stamp(e, i)
+    if (rt === undefined) return copyEvent(e)
+    if (typeof rt !== 'number' || !Number.isFinite(rt)) {
+      throw new TypeError(`withReceivedTs: stamp must return a finite number or undefined (got ${JSON.stringify(rt)} at index ${i})`)
+    }
+    return { ...copyEvent(e), receivedTs: rt }
+  })
+  return { schema_version: log.schema_version, events }
 }
 
 /**
