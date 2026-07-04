@@ -37,7 +37,7 @@ importers:
         version: 29.1.1
       secretlint:
         specifier: ^13.0.2
-        version: 13.0.2
+        version: 13.0.2(supports-color@10.2.2)
       simple-git:
         specifier: ^3.33.0
         version: 3.33.0(supports-color@10.2.2)
@@ -90,6 +90,8 @@ importers:
       '@cozy-games/utils':
         specifier: workspace:*
         version: link:../utils
+
+  packages/move-log: {}
 
   packages/utils: {}
 
@@ -8498,18 +8500,18 @@ snapshots:
     dependencies:
       '@secretlint/types': 13.0.2
 
-  '@secretlint/config-loader@13.0.2':
+  '@secretlint/config-loader@13.0.2(supports-color@10.2.2)':
     dependencies:
       '@secretlint/profiler': 13.0.2
       '@secretlint/resolver': 13.0.2
       '@secretlint/types': 13.0.2
       ajv: 8.20.0
       debug: 4.4.3(supports-color@10.2.2)
-      rc-config-loader: 4.1.4
+      rc-config-loader: 4.1.4(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  '@secretlint/core@13.0.2':
+  '@secretlint/core@13.0.2(supports-color@10.2.2)':
     dependencies:
       '@secretlint/profiler': 13.0.2
       '@secretlint/types': 13.0.2
@@ -8534,10 +8536,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@secretlint/node@13.0.2':
+  '@secretlint/node@13.0.2(supports-color@10.2.2)':
     dependencies:
-      '@secretlint/config-loader': 13.0.2
-      '@secretlint/core': 13.0.2
+      '@secretlint/config-loader': 13.0.2(supports-color@10.2.2)
+      '@secretlint/core': 13.0.2(supports-color@10.2.2)
       '@secretlint/formatter': 13.0.2
       '@secretlint/profiler': 13.0.2
       '@secretlint/source-creator': 13.0.2
@@ -12697,7 +12699,7 @@ snapshots:
       iconv-lite: 0.7.2
       unpipe: 1.0.0
 
-  rc-config-loader@4.1.4:
+  rc-config-loader@4.1.4(supports-color@10.2.2):
     dependencies:
       debug: 4.4.3(supports-color@10.2.2)
       js-yaml: 4.3.0
@@ -12968,11 +12970,11 @@ snapshots:
     dependencies:
       xmlchars: 2.2.0
 
-  secretlint@13.0.2:
+  secretlint@13.0.2(supports-color@10.2.2):
     dependencies:
       '@secretlint/config-creator': 13.0.2
       '@secretlint/formatter': 13.0.2
-      '@secretlint/node': 13.0.2
+      '@secretlint/node': 13.0.2(supports-color@10.2.2)
       '@secretlint/profiler': 13.0.2
       '@secretlint/resolver': 13.0.2
       '@secretlint/walker': 13.0.2
