@@ -1,7 +1,7 @@
 // @ts-check
 import { Grid } from '../grid/grid.js'
 import { eightWay } from '../grid/neighbors.js'
-import { placeMines, excludeAround } from './board.js'
+import { placeMines, excludeAround, validateLayout } from './board.js'
 import { floodReveal, countFlagsAround, allMines } from './reveal.js'
 
 /**
@@ -35,11 +35,16 @@ function reveal(state, r, c) {
 
   // First reveal: generate the board now, excluding this cell's neighborhood, so
   // the opening click is always safe and the seed fully determines the layout.
+  // Injected boards (fromLayout) arrive with minesPlaced already true and skip
+  // this — their opening reveal plays exactly as the layout dictates.
   if (!state.minesPlaced) {
     placeMines(state.seed, state.config, excludeAround(state.config, r, c), state.grid)
     state.minesPlaced = true
-    state.phase = 'active'
   }
+  // fresh → active on the first real reveal, whether the board was just generated
+  // or injected pre-built — decoupled from placement so both paths transition the
+  // same way.
+  if (state.phase === 'fresh') state.phase = 'active'
 
   if (cell.mine) {
     cell.status = 'revealed'
@@ -136,6 +141,36 @@ export const MinesweeperRules = {
       grid: new Grid(config.rows, config.cols, freshCell),
       phase: 'fresh',
       minesPlaced: false,
+      revealedSafe: 0
+    }
+  },
+
+  /**
+   * Build a game state from an explicit, pre-built layout (as returned by
+   * `generateBoard`) instead of generating one from a seed. Parallel to
+   * {@link init}: it yields a `State` a `GameSession` can drive identically —
+   * same rules, same transitions — the only difference being that the board is
+   * fixed up front, so the opening reveal is NOT made safe (first-click safety is
+   * a property of internal generation, not of a caller-supplied board). The
+   * layout is validated first and a malformed one throws.
+   *
+   * @param {import('./board.js').Layout} layout
+   * @param {{ seed?: number }} [opts] - seed is metadata only (no generation happens); defaults to 0
+   * @returns {State}
+   */
+  fromLayout(layout, { seed = 0 } = {}) {
+    validateLayout(layout)
+    const { rows, cols, mines } = layout
+    return {
+      seed,
+      config: { rows, cols, mines },
+      grid: new Grid(rows, cols, (r, c) => ({
+        mine: layout.cells[r][c].mine,
+        adjacent: layout.cells[r][c].adjacent,
+        status: 'hidden'
+      })),
+      phase: 'fresh',
+      minesPlaced: true,
       revealedSafe: 0
     }
   },

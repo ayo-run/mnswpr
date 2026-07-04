@@ -11,13 +11,18 @@
  */
 export class GameSession {
   /**
+   * Start from either `{ seed, config }` (the rules generate the board) or a
+   * pre-built `{ state }` (e.g. a rules factory that injected an explicit board);
+   * `state` wins when both are given. The session stays generic — it just holds
+   * whatever state the rules produced.
+   *
    * @param {Rules} rules
-   * @param {{ seed: number, config: object, clock?: () => number }} opts
+   * @param {{ seed?: number, config?: object, state?: object, clock?: () => number }} opts
    */
-  constructor(rules, { seed, config, clock = () => 0 }) {
+  constructor(rules, { seed, config, state, clock = () => 0 }) {
     this.rules = rules
     this.clock = clock
-    this.state = rules.init(seed, config)
+    this.state = state ?? rules.init(seed, config)
     /** @type {Array<{ move: object, t: number }>} */
     this._log = []
     this._t0 = null

@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import {
   Grid, eightWay, orthogonal,
   GameSession, replay, mulberry32,
-  MinesweeperRules, generateBoard, levels
+  MinesweeperRules, generateBoard, validateLayout, levels
 } from '../core/index.js'
 import { placeMines, excludeAround } from '../core/minesweeper/board.js'
 
@@ -244,6 +244,114 @@ describe('rules (Layer 2)', () => {
     const lost = MinesweeperRules.apply(active, { type: 'reveal', r: mine.r, c: mine.c }).state
     const overView = MinesweeperRules.project(lost)
     expect(overView.cells.some(c => c.status === 'hidden' && c.mine === true)).toBe(true)
+  })
+})
+
+describe('board injection (fromLayout, Layer 2)', () => {
+  // A hand-built 3x3 with a single mine at (0,0). Adjacency: the mine's three
+  // neighbors (0,1),(1,0),(1,1) are 1; everything else is 0.
+  const knownLayout = () => ({
+    rows: 3,
+    cols: 3,
+    mines: 1,
+    cells: [
+      [{ mine: true, adjacent: 0 }, { mine: false, adjacent: 1 }, { mine: false, adjacent: 0 }],
+      [{ mine: false, adjacent: 1 }, { mine: false, adjacent: 1 }, { mine: false, adjacent: 0 }],
+      [{ mine: false, adjacent: 0 }, { mine: false, adjacent: 0 }, { mine: false, adjacent: 0 }]
+    ],
+    mineLocations: [[0, 0]]
+  })
+
+  it('creates a game instance from an injected layout and scripts moves to known states', () => {
+    const session = new GameSession(MinesweeperRules, { state: MinesweeperRules.fromLayout(knownLayout()) })
+    expect(session.status()).toBe('fresh')
+
+    // Reveal a numbered (non-zero) cell: it activates the game and reveals just
+    // itself, carrying the layout's adjacency — proof the injected board is live.
+    const first = session.applyMove({ type: 'reveal', r: 0, c: 1 })
+    expect(session.status()).toBe('active')
+    expect(first.events[0].cells).toEqual([{ r: 0, c: 1, adjacent: 1 }])
+
+    // Stepping on the injected mine loses and reports it (before any flood wins).
+    const boom = session.applyMove({ type: 'reveal', r: 0, c: 0 })
+    expect(session.status()).toBe('lost')
+    expect(boom.events[0]).toMatchObject({ type: 'explode', r: 0, c: 0 })
+    expect(boom.events[0].mines).toEqual([{ r: 0, c: 0 }])
+  })
+
+  it('a zero cell floods the connected safe region on an injected board', () => {
+    const session = new GameSession(MinesweeperRules, { state: MinesweeperRules.fromLayout(knownLayout()) })
+    // (2,2) is a zero far from the mine; flood opens all 8 safe cells → win.
+    const flood = session.applyMove({ type: 'reveal', r: 2, c: 2 })
+    expect(flood.events[0].cells.length).toBe(8)
+    expect(session.status()).toBe('won')
+  })
+
+  it('an injected board can be played to a win, every safe cell revealed', () => {
+    const session = new GameSession(MinesweeperRules, { state: MinesweeperRules.fromLayout(knownLayout()) })
+    // Reveal all 8 non-mine cells; avoid (0,0).
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        if (r === 0 && c === 0) continue
+        session.applyMove({ type: 'reveal', r, c })
+      }
+    }
+    expect(session.status()).toBe('won')
+  })
+
+  it('plays identically to a generated board: injecting a generated layout reproduces its play', () => {
+    // Generate a board, then inject that exact layout. Revealing any cell must
+    // report the layout's own adjacency, and mines must sit where the layout says.
+    const layout = generateBoard(9, 9, 10, { seed: 42, safeCell: { r: 4, c: 4 } })
+    const state = MinesweeperRules.fromLayout(layout)
+    const { events } = MinesweeperRules.apply(state, { type: 'reveal', r: 4, c: 4 })
+    expect(state.phase).toBe('active')
+    // (4,4) was forced safe; its revealed adjacency matches the layout.
+    const seen = events[0].cells.find(cell => cell.r === 4 && cell.c === 4)
+    expect(seen.adjacent).toBe(layout.cells[4][4].adjacent)
+    // The mines are exactly the layout's mines.
+    const mines = []
+    state.grid.forEach((cell, r, c) => { if (cell.mine) mines.push([r, c]) })
+    expect(mines.sort()).toEqual([...layout.mineLocations].sort())
+  })
+
+  it('two sessions from the same layout with the same script transition identically', () => {
+    const script = [{ type: 'reveal', r: 2, c: 2 }, { type: 'flag', r: 0, c: 0 }, { type: 'reveal', r: 0, c: 1 }]
+    const run = () => {
+      const s = new GameSession(MinesweeperRules, { state: MinesweeperRules.fromLayout(knownLayout()) })
+      return script.map(m => s.applyMove(m).view)
+    }
+    expect(run()).toEqual(run())
+  })
+
+  it('rejects malformed layouts with a clear error', () => {
+    expect(() => MinesweeperRules.fromLayout(null)).toThrow(TypeError)
+    expect(() => MinesweeperRules.fromLayout('nope')).toThrow(TypeError)
+    // dimensions don't match the cells grid
+    expect(() => MinesweeperRules.fromLayout({ ...knownLayout(), rows: 4 })).toThrow(RangeError)
+    // mine count disagrees with the actual mined cells
+    expect(() => MinesweeperRules.fromLayout({ ...knownLayout(), mines: 2 })).toThrow(RangeError)
+    // a cell missing its shape
+    const badCells = knownLayout()
+    badCells.cells[1][1] = { mine: false } // no `adjacent`
+    expect(() => MinesweeperRules.fromLayout(badCells)).toThrow(TypeError)
+    // mineLocations pointing at a non-mined cell
+    const badLocs = knownLayout()
+    badLocs.mineLocations = [[2, 2]]
+    expect(() => MinesweeperRules.fromLayout(badLocs)).toThrow(RangeError)
+  })
+
+  it('validateLayout accepts a freshly generated board', () => {
+    expect(() => validateLayout(generateBoard(16, 16, 40, { seed: 3 }))).not.toThrow()
+  })
+
+  it('leaves existing seed-based construction unaffected', () => {
+    // No `state` supplied ⇒ the session still generates from seed/config as before.
+    const session = new GameSession(MinesweeperRules, { seed: 3, config: beginner })
+    const { events } = session.applyMove({ type: 'reveal', r: 0, c: 0 })
+    expect(session.status()).toBe('active')
+    expect(session.state.grid.at(0, 0).mine).toBe(false) // first-click safety intact
+    expect(events[0].cells.length).toBeGreaterThan(1)
   })
 })
 

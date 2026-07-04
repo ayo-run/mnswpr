@@ -84,6 +84,66 @@ export function fillMines(rng, config, exclude, grid) {
 }
 
 /**
+ * Assert a plain layout object (as produced by {@link generateBoard}) is
+ * well-formed before it's injected into a game: correct dimensions, cell shape,
+ * a mine count that matches its own cells, and in-bounds mine positions. Throws a
+ * clear error on the first problem so a malformed board can't silently corrupt
+ * win detection or adjacency. Returns the layout for convenient chaining.
+ *
+ * @param {unknown} layout
+ * @returns {Layout}
+ */
+export function validateLayout(layout) {
+  if (layout === null || typeof layout !== 'object') {
+    throw new TypeError(`validateLayout: expected a layout object (got ${layout === null ? 'null' : typeof layout})`)
+  }
+  const { rows, cols, mines, cells, mineLocations } = /** @type {any} */ (layout)
+  if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || cols < 1) {
+    throw new RangeError(`validateLayout: rows/cols must be positive integers (got ${rows}x${cols})`)
+  }
+  if (!Array.isArray(cells) || cells.length !== rows) {
+    throw new RangeError(`validateLayout: cells must have ${rows} rows (got ${Array.isArray(cells) ? cells.length : typeof cells})`)
+  }
+  let mineCount = 0
+  for (let r = 0; r < rows; r++) {
+    const row = cells[r]
+    if (!Array.isArray(row) || row.length !== cols) {
+      throw new RangeError(`validateLayout: row ${r} must have ${cols} cells (got ${Array.isArray(row) ? row.length : typeof row})`)
+    }
+    for (let c = 0; c < cols; c++) {
+      const cell = row[c]
+      if (cell === null || typeof cell !== 'object' || typeof cell.mine !== 'boolean' || !Number.isInteger(cell.adjacent)) {
+        throw new TypeError(`validateLayout: cell (${r},${c}) must be { mine: boolean, adjacent: integer }`)
+      }
+      if (cell.mine) mineCount++
+    }
+  }
+  if (!Number.isInteger(mines) || mines < 0 || mines > rows * cols) {
+    throw new RangeError(`validateLayout: mines must be an integer in [0, ${rows * cols}] (got ${mines})`)
+  }
+  if (mineCount !== mines) {
+    throw new RangeError(`validateLayout: mines (${mines}) disagrees with ${mineCount} mined cells`)
+  }
+  // mineLocations is optional, but if present it must agree with the grid — the
+  // "dimensions vs. mine positions" cross-check.
+  if (mineLocations !== undefined) {
+    if (!Array.isArray(mineLocations) || mineLocations.length !== mineCount) {
+      throw new RangeError(`validateLayout: mineLocations must list all ${mineCount} mines (got ${Array.isArray(mineLocations) ? mineLocations.length : typeof mineLocations})`)
+    }
+    for (const loc of mineLocations) {
+      if (!Array.isArray(loc) || loc.length !== 2) {
+        throw new TypeError(`validateLayout: each mineLocation must be a [r, c] pair (got ${JSON.stringify(loc)})`)
+      }
+      const [r, c] = loc
+      if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || c < 0 || r >= rows || c >= cols || !cells[r][c].mine) {
+        throw new RangeError(`validateLayout: mineLocation [${r}, ${c}] is out of bounds or not a mined cell`)
+      }
+    }
+  }
+  return /** @type {Layout} */ (layout)
+}
+
+/**
  * Pure, Node-runnable board generation: given a size, a mine count, and an
  * injected RNG, produce a plain layout object — no DOM, no I/O, no `Grid` class
  * leaking out. This is the headless entry point behind `@ayo-run/mnswpr/core`;
