@@ -12,13 +12,28 @@ import {
 export class FirebaseAdapter {
 
   /**
+   * Supply EITHER a ready Firestore instance via `store` (the injection point —
+   * e.g. a privileged/server-side setup, or an app you already initialized), OR a
+   * `firebaseConfig` for the package to initialize its own app. `store` wins when
+   * both are given; with an injected store the package initializes nothing and
+   * owns no app lifecycle (so `emulator` — a convenience of internal init — is
+   * ignored; wire the emulator into your own store).
+   *
    * @param {Object} options
-   * @param {Object} options.firebaseConfig - Firebase app config (public; access governed by security rules)
+   * @param {Object} [options.store] - a Firestore instance to use as-is (injection point)
+   * @param {Object} [options.firebaseConfig] - Firebase app config for internal init (public; access governed by security rules)
    * @param {String} [options.namespace] - collection prefix
-   * @param {{ host?: string, port?: number }} [options.emulator] - point at a local Firestore emulator (dev/test only)
+   * @param {{ host?: string, port?: number }} [options.emulator] - point the internally-created store at a local Firestore emulator (dev/test only)
    */
   constructor(options = {}) {
     this.namespace = options.namespace || 'lb'
+    if (options.store) {
+      this.store = options.store
+      return
+    }
+    if (!options.firebaseConfig) {
+      throw new TypeError('FirebaseAdapter: provide either `store` (a Firestore instance) or `firebaseConfig`')
+    }
     const app = initializeApp(options.firebaseConfig)
     this.store = getFirestore(app)
     if (options.emulator) {

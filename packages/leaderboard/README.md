@@ -149,11 +149,30 @@ Want to author your own custom elements this way? Check out
 
 ## Choosing a backend
 
+### Bring your own backend instance (injection)
+
+Both adapters let the **consumer own the backend instance** — including a
+privileged/admin-level or server-side one — rather than the package creating its
+own. This is the injection point per adapter:
+
+| Adapter    | Injection point            | Internal init fallback              |
+| ---------- | -------------------------- | ----------------------------------- |
+| Supabase   | `client` (a supabase-js client you build) — **always** consumer-supplied; the package takes no supabase dependency | none — a client is required |
+| Firebase   | `store` (a Firestore instance you build) | `firebaseConfig` → the package initializes its own app |
+
+Supply a privileged instance and every read/write runs against it — the package
+adds no auth or app lifecycle of its own.
+
 ### Firebase (Firestore)
 
 ```js
 import { FirebaseAdapter } from '@cozy-games/leaderboard/adapters/firebase.js'
+
+// (a) let the package initialize from a public config:
 const adapter = new FirebaseAdapter({ firebaseConfig, namespace: 'mw' })
+
+// (b) OR inject a Firestore instance you built (e.g. privileged/server-side):
+const adapter = new FirebaseAdapter({ store: myFirestore, namespace: 'mw' })
 ```
 
 Needs the `firebase` peer dependency. Uses collections
@@ -162,9 +181,10 @@ Needs the `firebase` peer dependency. Uses collections
 and all-time sorts by `score`, so only Firestore's automatic single-field indexes
 are needed — no composite indexes to deploy.
 
-For local development, pass `emulator` to run against the
+With an injected `store` the package initializes nothing and owns no app
+lifecycle. For internal init, pass `emulator` to run against the
 [Firestore emulator](https://firebase.google.com/docs/emulator-suite) — no cloud,
-no deploy:
+no deploy (wire the emulator into your own store if you inject one):
 
 ```js
 new FirebaseAdapter({ firebaseConfig, namespace: 'mw', emulator: { host: '127.0.0.1', port: 8080 } })
