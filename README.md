@@ -13,9 +13,9 @@ A growing collection of small browser games and the shared, reusable packages th
 
 | Package              | State          | Published | Documented |
 | -------------------- | -------------- | --------- | ---------- |
-| `mnswpr` (game core) | 🚧 Development |           |            |
+| `mnswpr` (game core) | ✅ Built       |           |            |
 | leaderboard          | ✅ Built       |           |            |
-| move-log    | 🔮 Planned     |           |            |
+| move-log             | 🚧 Development |           |            |
 | replay engine        | 🔮 Planned     |           |            |
 | rating math          | 🔮 Planned     |           |            |
 | `sudoku` (game core) | 🔮 Planned     |           |            |
