@@ -18,7 +18,7 @@ export { replay } from './session/replay.js'
 export { mulberry32, randInt } from './session/rng.js'
 
 // Layer 2 — Minesweeper rules & pure board generation
-export { MinesweeperRules } from './minesweeper/rules.js'
+export { MinesweeperRules, MOVE_EVENT_TYPES } from './minesweeper/rules.js'
 export { generateBoard, validateLayout } from './minesweeper/board.js'
 
 // Shared level presets (also consumed by the DOM client)

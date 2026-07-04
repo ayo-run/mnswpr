@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import {
   Grid, eightWay, orthogonal,
   GameSession, replay, mulberry32,
-  MinesweeperRules, generateBoard, validateLayout, levels
+  MinesweeperRules, generateBoard, validateLayout, MOVE_EVENT_TYPES, levels
 } from '../core/index.js'
 import { placeMines, excludeAround } from '../core/minesweeper/board.js'
 
@@ -558,6 +558,112 @@ describe('resume from serialized state (Layer 1)', () => {
   })
 })
 
+describe('typed move-events (onMove)', () => {
+  // A 3x3 with a single mine at (0,0); adjacency computed for it. Lets us script
+  // exact coordinates and outcomes for a fully-asserted event stream.
+  const knownLayout = () => ({
+    rows: 3,
+    cols: 3,
+    mines: 1,
+    cells: [
+      [{ mine: true, adjacent: 0 }, { mine: false, adjacent: 1 }, { mine: false, adjacent: 0 }],
+      [{ mine: false, adjacent: 1 }, { mine: false, adjacent: 1 }, { mine: false, adjacent: 0 }],
+      [{ mine: false, adjacent: 0 }, { mine: false, adjacent: 0 }, { mine: false, adjacent: 0 }]
+    ],
+    mineLocations: [[0, 0]]
+  })
+
+  const injected = clock =>
+    new GameSession(MinesweeperRules, { state: MinesweeperRules.fromLayout(knownLayout()), clock })
+
+  it('exports the move-event vocabulary', () => {
+    expect(MOVE_EVENT_TYPES).toEqual(['reveal', 'flag', 'unflag', 'chord'])
+  })
+
+  it('emits the full typed event stream for a scripted game (all four types + no-op)', () => {
+    const clock = makeClock()
+    const session = injected(clock)
+    const events = []
+    session.onMove(e => events.push(e))
+
+    clock.tick() // 1050
+    session.applyMove({ type: 'reveal', r: 0, c: 1 }) // number cell → reveals itself
+    clock.tick() // 1100
+    session.applyMove({ type: 'flag', r: 0, c: 0 })   // flag the mine
+    clock.tick() // 1150
+    session.applyMove({ type: 'flag', r: 0, c: 0 })   // toggle off → unflag
+    clock.tick() // 1200
+    session.applyMove({ type: 'flag', r: 0, c: 0 })   // flag again
+    clock.tick() // 1250
+    session.applyMove({ type: 'chord', r: 0, c: 1 })  // 1 adjacent flag == value → chord
+    clock.tick() // 1300
+    session.applyMove({ type: 'reveal', r: 0, c: 1 }) // already revealed → no-op, no event
+
+    expect(events).toEqual([
+      { type: 'reveal', r: 0, c: 1, t: 1050, seq: 1 },
+      { type: 'flag', r: 0, c: 0, t: 1100, seq: 2 },
+      { type: 'unflag', r: 0, c: 0, t: 1150, seq: 3 },
+      { type: 'flag', r: 0, c: 0, t: 1200, seq: 4 },
+      { type: 'chord', r: 0, c: 1, t: 1250, seq: 5 }
+    ])
+  })
+
+  it('timestamps come from the injected clock', () => {
+    const clock = makeClock(5000)
+    const session = injected(clock)
+    let event
+    session.onMove(e => { event = e })
+    clock.tick() // 5050
+    session.applyMove({ type: 'reveal', r: 2, c: 2 })
+    expect(event.t).toBe(5050)
+  })
+
+  it('onMove returns an unsubscribe that stops delivery', () => {
+    const session = injected(makeClock())
+    const events = []
+    const off = session.onMove(e => events.push(e))
+    session.applyMove({ type: 'flag', r: 0, c: 0 })
+    off()
+    session.applyMove({ type: 'flag', r: 0, c: 0 }) // unflag — not delivered
+    expect(events).toHaveLength(1)
+    expect(events[0].type).toBe('flag')
+  })
+
+  it('sequence numbers strictly increase across a resume (core-05)', () => {
+    const clock = makeClock()
+    const session = injected(clock)
+    const seqs = []
+    session.onMove(e => seqs.push(e.seq))
+    clock.tick(); session.applyMove({ type: 'reveal', r: 0, c: 1 }) // seq 1
+    clock.tick(); session.applyMove({ type: 'flag', r: 0, c: 0 })   // seq 2
+
+    // Serialize → resume; the counter must continue, not restart.
+    const snap = JSON.parse(JSON.stringify(session.serialize()))
+    expect(snap.seq).toBe(2)
+    const resumed = GameSession.deserialize(MinesweeperRules, snap, { clock: makeClock(clock()) })
+    const resumedSeqs = []
+    resumed.onMove(e => resumedSeqs.push(e.seq))
+    resumed.applyMove({ type: 'flag', r: 0, c: 0 }) // unflag → seq 3, not 1
+
+    expect(resumedSeqs).toEqual([3])
+    // strictly increasing over the whole session
+    const all = [...seqs, ...resumedSeqs]
+    expect(all).toEqual([...all].sort((a, b) => a - b))
+    expect(new Set(all).size).toBe(all.length) // no duplicates
+  })
+
+  it('a losing reveal still emits a reveal move-event', () => {
+    const clock = makeClock()
+    const session = injected(clock)
+    let event
+    session.onMove(e => { event = e })
+    clock.tick()
+    session.applyMove({ type: 'reveal', r: 0, c: 0 }) // steps on the mine
+    expect(session.status()).toBe('lost')
+    expect(event).toEqual({ type: 'reveal', r: 0, c: 0, t: 1050, seq: 1 })
+  })
+})
+
 describe('session + timing (Layer 1)', () => {
   it('reports authoritative elapsed time from the injected clock', () => {
     const clock = makeClock()
@@ -632,6 +738,21 @@ describe('determinism guard (invariant #4)', () => {
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/\/\/.*$/gm, '')
       if (/\bMath\.random\b/.test(code) || /\bDate\.now\b/.test(code) || /\bnew Date\b/.test(code)) {
+        offenders.push(file)
+      }
+    })
+    expect(offenders).toEqual([])
+  })
+
+  it('no DOM/rendering coupling in core/ (headless invariant)', () => {
+    const coreDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'core')
+    const offenders = []
+    walk(coreDir, file => {
+      if (!file.endsWith('.js')) return
+      const code = readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
+      if (/\b(document|window|navigator|localStorage|requestAnimationFrame)\b/.test(code) || /from ['"][^'"]*(client|renderer)/.test(code)) {
         offenders.push(file)
       }
     })

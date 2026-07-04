@@ -17,6 +17,22 @@ import { floodReveal, countFlagsAround, allMines } from './reveal.js'
  * @typedef {object} Event
  */
 
+/**
+ * The typed move-event vocabulary emitted by the session (one per effective
+ * move). This is the game's public event language — consumed later by the shared
+ * envelope. `type` + `r`/`c` are game meaning (classified here); `t` (injected
+ * clock) and `seq` (monotonic) are stamped by `GameSession` when it emits.
+ *
+ * Note `flag` vs `unflag`: both come from a `flag` move — the distinction is the
+ * outcome (did the toggle set or clear the flag), which only the rules can tell.
+ *
+ * @typedef {'reveal' | 'flag' | 'unflag' | 'chord'} MoveEventType
+ * @typedef {{ type: MoveEventType, r: number, c: number, t: number, seq: number }} MoveEvent
+ */
+
+/** The move-event vocabulary as runtime data (the `MoveEvent` `type` domain). */
+export const MOVE_EVENT_TYPES = /** @type {const} */ (['reveal', 'flag', 'unflag', 'chord'])
+
 const freshCell = () => ({ mine: false, adjacent: 0, status: 'hidden' })
 
 /** Valid game phases and per-cell statuses — the closed sets a snapshot may name. */
@@ -241,6 +257,31 @@ export const MinesweeperRules = {
   },
 
   project,
+
+  /**
+   * Classify an applied move into a typed move-event kind, or `null` if the move
+   * was a no-op (the rules produced no events — e.g. clicking a revealed cell).
+   * The session stamps the returned `{ type, r, c }` with `t` and `seq`. This is
+   * the seam that turns a raw `Move` into the {@link MoveEvent} vocabulary and,
+   * critically, splits a `flag` move into `flag`/`unflag` by its outcome.
+   *
+   * @param {Move} move
+   * @param {Event[]} events - the rules events this move produced
+   * @returns {{ type: MoveEventType, r: number, c: number } | null}
+   */
+  toMoveEvent(move, events) {
+    if (!events || events.length === 0) return null
+    switch (move.type) {
+      case 'reveal': return { type: 'reveal', r: move.r, c: move.c }
+      case 'chord': return { type: 'chord', r: move.r, c: move.c }
+      case 'flag': {
+        const flagged = events.find(e => e.type === 'flag')
+        if (!flagged) return null
+        return { type: flagged.flagged ? 'flag' : 'unflag', r: move.r, c: move.c }
+      }
+      default: return null
+    }
+  },
 
   /**
    * Snapshot a game state as a plain, JSON-safe object: the whole board (every

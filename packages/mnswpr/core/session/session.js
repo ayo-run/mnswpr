@@ -7,7 +7,7 @@
  * server's clock (authoritative). The session never calls a wall clock itself.
  * Future home: @cozy-games/game-session.
  *
- * @typedef {{ init: Function, apply: Function, status: Function, project: Function, serialize?: Function, deserialize?: Function }} Rules
+ * @typedef {{ init: Function, apply: Function, status: Function, project: Function, serialize?: Function, deserialize?: Function, toMoveEvent?: Function }} Rules
  */
 export class GameSession {
   /**
@@ -27,6 +27,26 @@ export class GameSession {
     this._log = []
     this._t0 = null
     this._tEnd = null
+    // Move-event emission: subscribers + a monotonic sequence counter (last seq
+    // assigned; 0 = none yet). Seq is part of the snapshot so it keeps rising
+    // across a resume rather than restarting.
+    /** @type {Set<(event: object) => void>} */
+    this._moveHandlers = new Set()
+    this._seq = 0
+  }
+
+  /**
+   * Subscribe to typed move-events — one per effective move (reveal / flag /
+   * unflag / chord), each carrying `{ type, r, c, t, seq }`. Returns an
+   * unsubscribe function. Pure in-process pub/sub: no DOM, no rendering. Requires
+   * the rules to implement `toMoveEvent`.
+   *
+   * @param {(event: object) => void} handler
+   * @returns {() => void} unsubscribe
+   */
+  onMove(handler) {
+    this._moveHandlers.add(handler)
+    return () => this._moveHandlers.delete(handler)
   }
 
   /**
@@ -46,7 +66,18 @@ export class GameSession {
     if (before === 'fresh' && after !== 'fresh' && this._t0 === null) this._t0 = t
     if ((after === 'won' || after === 'lost') && this._tEnd === null) this._tEnd = t
 
+    // Emit a typed move-event for effective moves (rules classify; no-ops → null).
+    if (typeof this.rules.toMoveEvent === 'function') {
+      const kind = this.rules.toMoveEvent(move, events)
+      if (kind) this._emitMove({ ...kind, t, seq: ++this._seq })
+    }
+
     return { events, view: this.rules.project(state), time: this.elapsed() }
+  }
+
+  /** @param {object} event */
+  _emitMove(event) {
+    for (const handler of this._moveHandlers) handler(event)
   }
 
   status() {
@@ -82,7 +113,7 @@ export class GameSession {
    * (core-05); the live `clock` is deliberately excluded (it's re-injected on
    * {@link GameSession.deserialize}). Requires the rules to implement `serialize`.
    *
-   * @returns {{ state: object, log: Array<{ move: object, t: number }>, t0: number | null, tEnd: number | null }}
+   * @returns {{ state: object, log: Array<{ move: object, t: number }>, t0: number | null, tEnd: number | null, seq: number }}
    */
   serialize() {
     if (typeof this.rules.serialize !== 'function') {
@@ -92,7 +123,8 @@ export class GameSession {
       state: this.rules.serialize(this.state),
       log: this._log.map(({ move, t }) => ({ move, t })),
       t0: this._t0,
-      tEnd: this._tEnd
+      tEnd: this._tEnd,
+      seq: this._seq
     }
   }
 
@@ -114,7 +146,7 @@ export class GameSession {
     if (snapshot === null || typeof snapshot !== 'object') {
       throw new TypeError(`GameSession.deserialize: expected a snapshot object (got ${snapshot === null ? 'null' : typeof snapshot})`)
     }
-    const { state, log, t0, tEnd } = snapshot
+    const { state, log, t0, tEnd, seq } = snapshot
     if (!Array.isArray(log)) {
       throw new TypeError('GameSession.deserialize: snapshot.log must be an array')
     }
@@ -126,11 +158,17 @@ export class GameSession {
     if (!(t0 === null || typeof t0 === 'number') || !(tEnd === null || typeof tEnd === 'number')) {
       throw new TypeError('GameSession.deserialize: snapshot.t0/tEnd must each be a number or null')
     }
+    if (!(seq === undefined || (Number.isInteger(seq) && seq >= 0))) {
+      throw new TypeError('GameSession.deserialize: snapshot.seq must be a non-negative integer')
+    }
     // rules.deserialize validates and revives the game-state half.
     const session = new GameSession(rules, { state: rules.deserialize(state), clock })
     session._log = log.map(({ move, t }) => ({ move, t }))
     session._t0 = t0
     session._tEnd = tEnd
+    // Continue the sequence where it left off so move-event seq keeps rising
+    // across a resume (absent in a pre-move-event snapshot ⇒ start at 0).
+    session._seq = seq ?? 0
     return session
   }
 }
