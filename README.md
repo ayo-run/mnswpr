@@ -1,25 +1,28 @@
 # Cozy Games
 
-A monorepo for **Cozy Games** — a growing collection of small browser
-games and the shared, reusable packages that power them.
+A growing collection of small browser games and the shared, reusable packages that power them.
 
-## Layout
+# Roadmap
 
-```
-cozy-games/
-├── apps/          Playable games (each deploys independently)
-│   └── mnswpr/    Minesweeper — mnswpr.com  (@ayo-run/mnswpr engine + Firebase leaderboard)
-├── packages/      Shared, publishable libraries
-│   ├── mnswpr/       @ayo-run/mnswpr   — the vanilla Minesweeper game engine
-│   ├── leaderboard/  @cozy-games/leaderboard — backend-agnostic, time-windowed leaderboard
-│   └── utils/        @cozy-games/utils — shared browser utilities (storage, timer, …)
-└── sites/         Docs (Astro Starlight) and UI demos  — placeholders for now
-```
+- **Public APIs** — game-agnostic modules (core, move-log, replay, leaderboard, rating) built inside the first game.
+- **Second Game** — validate those APIs by adding a second game through the adapter alone.
+- **Reusable Packages** — extract proven modules into standalone, versioned packages.
+- **Adapters** — freeze the adapter contract for third-party games to build against.
 
-Each app owns its own backend config (e.g. mnswpr's Firestore rules live in
-`apps/mnswpr/`); the shared packages stay backend-agnostic.
+## Packages
 
-## Contributing & development
+| Package              | State                |
+| -------------------- | -------------------- |
+| `mnswpr` (game core) | 🚧 Active development |
+| leaderboard          | ✅ Done (unpublished) |
+| move-log envelope    | 🔮 Planned            |
+| replay engine        | 🔮 Planned            |
+| rating math          | 🔮 Planned            |
+| `sudoku` (game core) | 🔮 Planned            |
+
+> Note: `@ayo-run/mnswpr` on npm predates this project and will be deprecated in favor of `cozy-games/mnswpr`.
+
+## Contributing
 
 Setup, running games locally, testing, code style, and local infra all live in
 **[CONTRIBUTING.md](CONTRIBUTING.md)**. In short — this is a

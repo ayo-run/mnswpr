@@ -20,6 +20,16 @@ develop, test, and submit changes.
   or an unsupported platform) install a JDK yourself. You can avoid Java entirely
   with the `dev:no-db` script below.
 
+## Project Structure
+
+- `apps/` - Playable games (each deploys independently)
+- `packages/` - Shared, publishable libraries
+- `sites/` - Docs (Astro Starlight) and UI demos  — placeholders for now
+```
+
+Each app owns its own backend config (e.g. mnswpr's Firestore rules live in
+`apps/mnswpr/`); the shared packages stay backend-agnostic.
+
 ## Setup
 
 ```bash
