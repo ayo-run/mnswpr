@@ -147,6 +147,37 @@ Want to author your own custom elements this way? Check out
 **[webcomponent.io](https://webcomponent.io)** and
 **[web-component-base](https://github.com/ayo-run/wcb)**.
 
+## Separable read & write surfaces
+
+The service is composed of two independently importable halves, so you never pull
+in code you don't use — and can point each half at a differently-privileged
+backend instance:
+
+| Surface | Import | Uses | Adapter methods |
+| ------- | ------ | ---- | --------------- |
+| **Read / subscribe** | `@cozy-games/leaderboard/leaderboard-read.js` → `LeaderBoardReader` | `render()` — query a window + render the list | `listScores` |
+| **Write** | `@cozy-games/leaderboard/leaderboard-write.js` → `LeaderBoardWriter` | `submit()` — archive + ranked entry | `addScore`, optional `archive`, `getConfig` |
+
+```js
+// Read-only page (public, less-privileged instance) — no write code loaded:
+import { LeaderBoardReader } from '@cozy-games/leaderboard/leaderboard-read.js'
+const board = new LeaderBoardReader({ adapter: readAdapter, formatScore })
+document.body.append(await board.render('beginner', 'Best Times'))
+
+// Server / trusted path (privileged instance) — no DOM or render code loaded:
+import { LeaderBoardWriter } from '@cozy-games/leaderboard/leaderboard-write.js'
+const writer = new LeaderBoardWriter({ adapter: writeAdapter })
+await writer.submit(entry)
+```
+
+The read module imports **no** write-path code (no bucket-key computation, no
+write adapter calls) and the write module imports **no** read/render code (no
+DOM, no `listScores`) — which also keeps each surface trivial to test in
+isolation. `LeaderBoardService` (and `<cozy-leaderboard>`) remain the combined
+facade — same `render()` + `submit()` API — for consumers that want both; it just
+composes a `LeaderBoardReader` and a `LeaderBoardWriter` (exposed as `.reader` /
+`.writer`).
+
 ## Choosing a backend
 
 ### Bring your own backend instance (injection)
