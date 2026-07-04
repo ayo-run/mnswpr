@@ -15,6 +15,23 @@ clock.pause()     // freeze at the current position
 clock.seek(1500)  // jump to 1500ms — delivers exactly the events at offset <= 1500
 ```
 
+## Progress via a game adapter
+
+The engine never interprets events. To show completion percent, supply a game
+**adapter** with a `progress(events) → %` reducer at construction:
+
+```js
+const adapter = { progress: (events) => (events.length / total) * 100 }
+const clock = new PlaybackClock(envelope, {}, adapter)
+
+clock.seek(1500)
+clock.progress() // 0–100 (clamped), or null if no adapter supplied
+```
+
+The reducer receives the ordered slice of events delivered so far; the engine
+clamps the result and stays blind to the payload. See
+[docs/adapter-interface.md](./docs/adapter-interface.md) for the full contract.
+
 ## Offsets
 
 Each event fires at its **offset** — its recorded `t` minus the first event's

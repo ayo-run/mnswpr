@@ -25,13 +25,38 @@ import { assertMoveLog } from '@cozy-games/move-log'
  * }} Deps
  */
 
+/**
+ * A reducer supplied by a game adapter: given the ordered slice of events played
+ * so far (offset <= the current position), return a completion percentage in
+ * `[0, 100]`. Typed generically over the game's event vocabulary `T`. The engine
+ * clamps the result and never inspects an event's payload — all interpretation
+ * lives in this reducer.
+ *
+ * @template T
+ * @typedef {(events: import('@cozy-games/move-log').MoveEvent<T>[]) => number} ProgressReducer
+ */
+
+/**
+ * The replay game-adapter contract (v0) — the seam through which game meaning
+ * enters the engine. Currently one optional method; more join as the contract
+ * grows. See `docs/adapter-interface.md`.
+ *
+ * @template T
+ * @typedef {{ progress?: ProgressReducer<T> }} ReplayAdapter
+ */
+
 export class PlaybackClock {
   /**
    * @param {Envelope} envelope - a valid move-log envelope (validated here)
    * @param {Deps} [deps] - injected time source + scheduler (default: real host)
+   * @param {ReplayAdapter<any>} [adapter] - game adapter (e.g. a progress reducer)
    */
-  constructor(envelope, deps = {}) {
+  constructor(envelope, deps = {}, adapter = {}) {
     assertMoveLog(envelope)
+    if (adapter.progress !== undefined && typeof adapter.progress !== 'function') {
+      throw new TypeError('PlaybackClock: adapter.progress must be a function when provided')
+    }
+    this._adapter = adapter
 
     const {
       clock = () => Date.now(),
@@ -77,6 +102,25 @@ export class PlaybackClock {
   /** Current playback position in ms, clamped to `[0, duration]`. */
   position() {
     return this._livePosition()
+  }
+
+  /**
+   * Completion percentage (0–100) at the current position, via the adapter's
+   * progress reducer — or `null` if no reducer was supplied. The engine hands the
+   * reducer the ordered slice of events delivered so far and clamps its result;
+   * it never interprets an event payload itself (that's the adapter's job).
+   *
+   * @returns {number | null}
+   */
+  progress() {
+    const reduce = this._adapter.progress
+    if (typeof reduce !== 'function') return null
+    const delivered = this._events.slice(0, this._cursor).map(e => e.record)
+    const pct = reduce(delivered)
+    if (typeof pct !== 'number' || Number.isNaN(pct)) {
+      throw new TypeError(`PlaybackClock.progress: reducer must return a number (got ${typeof pct})`)
+    }
+    return Math.min(100, Math.max(0, pct))
   }
 
   /**

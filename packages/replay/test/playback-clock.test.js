@@ -220,9 +220,79 @@ describe('PlaybackClock — with vi fake timers', () => {
   })
 })
 
+describe('PlaybackClock — progress reducer (adapter seam)', () => {
+  /**
+   * A dummy adapter defined HERE, in the test — the engine interprets nothing.
+   * @typedef {{ type: string }} DummyEvent
+   * @type {import('@cozy-games/replay').ProgressReducer<DummyEvent>}
+   */
+  const byCount = events => (events.length / 3) * 100 // 3 = total in envelope()
+
+  it('runs against a dummy adapter: progress reflects the delivered slice', () => {
+    const clock = new PlaybackClock(envelope(), fakeScheduler(), { progress: byCount })
+    expect(clock.progress()).toBe(0) // nothing delivered yet
+
+    clock.seek(0) // offset-0 event delivered ⇒ 1/3
+    expect(clock.progress()).toBeCloseTo(33.333, 2)
+
+    clock.seek(100) // 2/3
+    expect(clock.progress()).toBeCloseTo(66.667, 2)
+
+    clock.seek(400) // all 3 ⇒ 100
+    expect(clock.progress()).toBe(100)
+
+    clock.seek(50) // rewind ⇒ back to 1/3
+    expect(clock.progress()).toBeCloseTo(33.333, 2)
+  })
+
+  it('advances as playback advances', () => {
+    const s = fakeScheduler()
+    const clock = new PlaybackClock(envelope(), s, { progress: byCount })
+    clock.play()
+    expect(clock.progress()).toBeCloseTo(33.333, 2) // offset-0 fired on play
+    s.advance(100)
+    expect(clock.progress()).toBeCloseTo(66.667, 2)
+    s.advance(250)
+    expect(clock.progress()).toBe(100)
+  })
+
+  it('returns null when no adapter (or no progress reducer) is supplied', () => {
+    expect(new PlaybackClock(envelope(), fakeScheduler()).progress()).toBe(null)
+    expect(new PlaybackClock(envelope(), fakeScheduler(), {}).progress()).toBe(null)
+  })
+
+  it('clamps the reducer output into [0, 100]', () => {
+    const over = new PlaybackClock(envelope(), fakeScheduler(), { progress: () => 999 })
+    const under = new PlaybackClock(envelope(), fakeScheduler(), { progress: () => -50 })
+    expect(over.progress()).toBe(100)
+    expect(under.progress()).toBe(0)
+  })
+
+  it('throws if the reducer returns a non-number', () => {
+    const clock = new PlaybackClock(envelope(), fakeScheduler(), { progress: () => /** @type {any} */ ('nope') })
+    expect(() => clock.progress()).toThrow(TypeError)
+  })
+
+  it('rejects a non-function progress at construction', () => {
+    expect(() => new PlaybackClock(envelope(), fakeScheduler(), { progress: /** @type {any} */ (42) })).toThrow(TypeError)
+  })
+})
+
 describe('game-agnosticism guard (envelope only, no game imports)', () => {
   const pkgDir = join(dirname(fileURLToPath(import.meta.url)), '..')
   const GAME_REFERENCES = /mnswpr|minesweeper/i
+
+  it('engine never interprets an event payload (no `.event` access in engine source)', () => {
+    const offenders = []
+    walk(pkgDir, file => {
+      if (!file.endsWith('.js') || file.includes('/test/')) return
+      const code = readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
+      if (/\.event\b/.test(code)) offenders.push(file)
+    })
+    expect(offenders).toEqual([]) // engine references only envelope metadata (seq/t) + opaque records
+  })
 
   it('manifest depends only on the envelope, never a game package', () => {
     const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'))
