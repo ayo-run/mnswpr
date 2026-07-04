@@ -93,6 +93,12 @@ importers:
 
   packages/move-log: {}
 
+  packages/replay:
+    dependencies:
+      '@cozy-games/move-log':
+        specifier: workspace:*
+        version: link:../move-log
+
   packages/utils: {}
 
 packages:

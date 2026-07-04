@@ -1,0 +1,25 @@
+{
+  "name": "@cozy-games/replay",
+  "version": "0.0.1",
+  "description": "Game-agnostic replay engine — a playback clock (play/pause/seek + event scheduling) that re-drives a move-log envelope over time",
+  "author": "Ayo Ayco",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayo-run/mnswpr"
+  },
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "default": "./index.js"
+    },
+    "./*": {
+      "default": "./*"
+    }
+  },
+  "dependencies": {
+    "@cozy-games/move-log": "workspace:*"
+  },
+  "license": "BSD-2-Clause"
+}
