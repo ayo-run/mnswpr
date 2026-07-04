@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import {
   Grid, eightWay, orthogonal,
   GameSession, replay, mulberry32,
-  MinesweeperRules, levels
+  MinesweeperRules, generateBoard, levels
 } from '../core/index.js'
 import { placeMines, excludeAround } from '../core/minesweeper/board.js'
 
@@ -92,6 +92,59 @@ describe('board generation (Layer 2)', () => {
       for (const [nr, nc] of eightWay(g, r, c)) if (g.at(nr, nc).mine) n++
       expect(cell.adjacent).toBe(n)
     })
+  })
+})
+
+describe('generateBoard (Layer 2, pure)', () => {
+  it('is callable in plain Node and returns a plain layout object', () => {
+    // Non-square (rows ≠ cols) pins the rows-first orientation.
+    const layout = generateBoard(4, 7, 5, { seed: 42 })
+    expect(layout.rows).toBe(4)
+    expect(layout.cols).toBe(7)
+    expect(layout.mines).toBe(5)
+    expect(layout.cells).toHaveLength(4)
+    expect(layout.cells.every(row => row.length === 7)).toBe(true)
+    // plain data only — no Grid instance, no class methods leaking out
+    expect(layout.cells[0][0]).toEqual({ mine: expect.any(Boolean), adjacent: expect.any(Number) })
+    expect(layout).toEqual(JSON.parse(JSON.stringify(layout)))
+    // places exactly `mines` mines
+    expect(layout.mineLocations).toHaveLength(5)
+    let mineCount = 0
+    for (const row of layout.cells) for (const cell of row) if (cell.mine) mineCount++
+    expect(mineCount).toBe(5)
+  })
+
+  it('same injected RNG (seed) → identical layout', () => {
+    const a = generateBoard(16, 16, 40, { rng: mulberry32(123) })
+    const b = generateBoard(16, 16, 40, { rng: mulberry32(123) })
+    expect(a).toEqual(b)
+    // and the seed convenience wrapper matches an explicitly injected mulberry32
+    expect(generateBoard(16, 16, 40, { seed: 123 })).toEqual(a)
+    // a different seed diverges
+    expect(generateBoard(16, 16, 40, { seed: 124 })).not.toEqual(a)
+  })
+
+  it('computes adjacency as the 8-way mine count', () => {
+    const layout = generateBoard(9, 9, 10, { seed: 99 })
+    const g = new Grid(9, 9, (r, c) => layout.cells[r][c])
+    layout.cells.forEach((row, r) => row.forEach((cell, c) => {
+      if (cell.mine) return
+      let n = 0
+      for (const [nr, nc] of eightWay(g, r, c)) if (g.at(nr, nc).mine) n++
+      expect(cell.adjacent).toBe(n)
+    }))
+  })
+
+  it('honors an exclude set (e.g. first-click safety)', () => {
+    const exclude = new Set([0]) // key 0 == cell (0,0)
+    const layout = generateBoard(9, 9, 10, { seed: 7, exclude })
+    expect(layout.cells[0][0].mine).toBe(false)
+  })
+
+  it('rejects impossible dimensions and mine counts', () => {
+    expect(() => generateBoard(0, 9, 1)).toThrow(RangeError)
+    expect(() => generateBoard(3, 3, 10)).toThrow(RangeError) // more mines than cells
+    expect(() => generateBoard(3, 3, -1)).toThrow(RangeError)
   })
 })
 

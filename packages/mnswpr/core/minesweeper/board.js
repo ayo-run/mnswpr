@@ -1,11 +1,17 @@
 // @ts-check
+import { Grid } from '../grid/grid.js'
 import { mulberry32, randInt } from '../session/rng.js'
 import { eightWay } from '../grid/neighbors.js'
 
 /**
  * @typedef {{ rows: number, cols: number, mines: number, id?: string }} Config
  * @typedef {{ mine: boolean, adjacent: number, status: 'hidden' | 'flagged' | 'revealed' }} Cell
+ * @typedef {{ mine: boolean, adjacent: number }} LayoutCell
+ * @typedef {{ rows: number, cols: number, mines: number, cells: LayoutCell[][], mineLocations: [number, number][] }} Layout
  */
+
+/** Shared empty exclude set for generation without first-click safety. */
+const NO_EXCLUDE = new Set()
 
 /**
  * The set of cells kept mine-free for first-click safety: the clicked cell, plus
@@ -34,6 +40,7 @@ export function excludeAround(config, r, c) {
 /**
  * Deterministically place mines and compute adjacency counts, mutating the grid
  * in place. Pure function of (seed, config, exclude) — same inputs, same board.
+ * Thin convenience wrapper over {@link fillMines} that builds the RNG from a seed.
  *
  * @param {number} seed
  * @param {Config} config
@@ -42,7 +49,21 @@ export function excludeAround(config, r, c) {
  * @returns {Set<number>} the mined coordinate keys
  */
 export function placeMines(seed, config, exclude, grid) {
-  const rng = mulberry32(seed)
+  return fillMines(mulberry32(seed), config, exclude, grid)
+}
+
+/**
+ * The injected-RNG seam under {@link placeMines}: place mines and compute
+ * adjacency counts, mutating the grid in place. Takes an rng function (any
+ * `() => [0, 1)`), so callers own determinism — same rng sequence, same board.
+ *
+ * @param {() => number} rng
+ * @param {Config} config
+ * @param {Set<number>} exclude - coordinate keys never to mine (first-click safety)
+ * @param {import('../grid/grid.js').Grid<Cell>} grid
+ * @returns {Set<number>} the mined coordinate keys
+ */
+export function fillMines(rng, config, exclude, grid) {
   const { rows, cols, mines } = config
   const placed = new Set()
   while (placed.size < mines) {
@@ -60,4 +81,51 @@ export function placeMines(seed, config, exclude, grid) {
     cell.adjacent = n
   })
   return placed
+}
+
+/**
+ * Pure, Node-runnable board generation: given a size, a mine count, and an
+ * injected RNG, produce a plain layout object — no DOM, no I/O, no `Grid` class
+ * leaking out. This is the headless entry point behind `@ayo-run/mnswpr/core`;
+ * the DOM client reaches the same generator lazily through `MinesweeperRules`.
+ *
+ * The injected `rng` is the determinism seam: the same rng sequence always
+ * yields the same layout. `seed` is a convenience — when no `rng` is given it is
+ * wrapped with {@link mulberry32}, keeping generation reproducible and free of
+ * `Math.random` (invariant #4).
+ *
+ * @param {number} rows - number of rows (board height)
+ * @param {number} cols - number of columns (board width)
+ * @param {number} mines - number of mines to place
+ * @param {{ rng?: () => number, seed?: number, exclude?: Set<number> }} [options]
+ * @returns {Layout} a plain, serializable layout object
+ */
+export function generateBoard(rows, cols, mines, { rng, seed = 0, exclude = NO_EXCLUDE } = {}) {
+  if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || cols < 1) {
+    throw new RangeError(`generateBoard: rows/cols must be positive integers (got ${rows}x${cols})`)
+  }
+  const capacity = rows * cols - exclude.size
+  if (!Number.isInteger(mines) || mines < 0 || mines > capacity) {
+    throw new RangeError(`generateBoard: mines must be an integer in [0, ${capacity}] (got ${mines})`)
+  }
+
+  const config = { rows, cols, mines }
+  const grid = new Grid(rows, cols, () => ({ mine: false, adjacent: 0, status: 'hidden' }))
+  fillMines(rng ?? mulberry32(seed), config, exclude, grid)
+
+  /** @type {LayoutCell[][]} */
+  const cells = []
+  /** @type {[number, number][]} */
+  const mineLocations = []
+  for (let r = 0; r < rows; r++) {
+    /** @type {LayoutCell[]} */
+    const row = []
+    for (let c = 0; c < cols; c++) {
+      const cell = grid.at(r, c)
+      row.push({ mine: cell.mine, adjacent: cell.adjacent })
+      if (cell.mine) mineLocations.push([r, c])
+    }
+    cells.push(row)
+  }
+  return { rows, cols, mines, cells, mineLocations }
 }
