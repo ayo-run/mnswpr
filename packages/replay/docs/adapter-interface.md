@@ -16,12 +16,14 @@ new PlaybackClock(envelope, deps, adapter)
 ```
 
 ```ts
-// Typed generically over the game's event vocabulary T.
+// Typed generically over the game's event vocabulary T (and state S).
 type ReplayAdapter<T> = {
   progress?: ProgressReducer<T>
+  state?: StateReducer<T, S>
 }
 
-type ProgressReducer<T> = (events: MoveEvent<T>[]) => number  // 0–100
+type ProgressReducer<T>   = (events: MoveEvent<T>[]) => number  // 0–100
+type StateReducer<T, S>   = (events: MoveEvent<T>[]) => S        // full game state
 ```
 
 `MoveEvent<T>` is the move-log record `{ seq, t, event, receivedTs? }`, where
@@ -54,6 +56,32 @@ const clock = new PlaybackClock(envelope, {}, adapter)
 clock.seek(1500)
 clock.progress() // → e.g. 42
 ```
+
+## `state(events) → S` (full-board mode)
+
+The second reducer reconstructs the **complete game state** at a playback point
+from the ordered slice of events delivered so far. It powers full-board replay —
+rebuilding the whole board on seek, not just a percentage.
+
+- **Input:** `MoveEvent<T>[]` — the played-so-far slice, in order.
+- **Output:** the game's own state type `S` (opaque to the engine). For mnswpr
+  it's a 2D board snapshot: `{ rows, cols, phase, revealedSafe, cells }`.
+- **When:** `clock.state()` returns the current reconstruction, and `onState`
+  streams `{ position, state }` as playback advances or seeks.
+
+### Flag-gated
+
+Full-board mode is **off by default** and gated behind a runtime flag — the
+engine's minimal, documented feature-flag seam:
+
+```js
+new PlaybackClock(envelope, deps, adapter, { fullBoard: true })
+```
+
+When the flag is **off** (default), the mode is fully inert: `state()` returns
+`null`, `onState` never fires, and the state reducer is never invoked (no
+reconstruction cost). When **on** with a `state` reducer supplied, `state()` and
+`onState` reconstruct the board — and `seek(t)` rebuilds the exact state at `t`.
 
 ## Contract rules
 

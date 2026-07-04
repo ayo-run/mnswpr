@@ -37,26 +37,43 @@ import { assertMoveLog } from '@cozy-games/move-log'
  */
 
 /**
+ * A reducer supplied by a game adapter for full-board replay: given the ordered
+ * slice of events played so far, reconstruct the complete game state `S` at that
+ * point. Typed generically over the event vocabulary `T` and the (opaque) state
+ * `S`. Powers the flag-gated full-board mode; the engine treats `S` as a black box.
+ *
+ * @template T, S
+ * @typedef {(events: import('@cozy-games/move-log').MoveEvent<T>[]) => S} StateReducer
+ */
+
+/**
  * The replay game-adapter contract (v0) — the seam through which game meaning
- * enters the engine. Currently one optional method; more join as the contract
- * grows. See `docs/adapter-interface.md`.
+ * enters the engine. Both methods are optional; the engine calls whichever the
+ * mode needs and never interprets an event itself. See `docs/adapter-interface.md`.
  *
  * @template T
- * @typedef {{ progress?: ProgressReducer<T> }} ReplayAdapter
+ * @typedef {{ progress?: ProgressReducer<T>, state?: StateReducer<T, any> }} ReplayAdapter
  */
 
 export class PlaybackClock {
   /**
    * @param {Envelope} envelope - a valid move-log envelope (validated here)
    * @param {Deps} [deps] - injected time source + scheduler (default: real host)
-   * @param {ReplayAdapter<any>} [adapter] - game adapter (e.g. a progress reducer)
+   * @param {ReplayAdapter<any>} [adapter] - game adapter (progress / state reducers)
+   * @param {{ fullBoard?: boolean }} [options] - `fullBoard` flag-gates full-board
+   *   mode (default OFF: `state()`/`onState` are inert and the state reducer is
+   *   never called). The minimal, documented feature-flag seam for this engine.
    */
-  constructor(envelope, deps = {}, adapter = {}) {
+  constructor(envelope, deps = {}, adapter = {}, options = {}) {
     assertMoveLog(envelope)
     if (adapter.progress !== undefined && typeof adapter.progress !== 'function') {
       throw new TypeError('PlaybackClock: adapter.progress must be a function when provided')
     }
+    if (adapter.state !== undefined && typeof adapter.state !== 'function') {
+      throw new TypeError('PlaybackClock: adapter.state must be a function when provided')
+    }
     this._adapter = adapter
+    this._fullBoard = options.fullBoard === true
 
     const {
       clock = () => Date.now(),
@@ -91,6 +108,8 @@ export class PlaybackClock {
     this._progressHandlers = new Set()
     /** Last progress value pushed, so unchanged progress (e.g. a flag) is not re-emitted. */
     this._lastProgress = /** @type {number | null} */ (null)
+    /** @type {Set<(update: { position: number, state: any }) => void>} */
+    this._stateHandlers = new Set()
   }
 
   /** Total playback length in ms (offset of the last event; 0 if empty). */
@@ -128,6 +147,22 @@ export class PlaybackClock {
   }
 
   /**
+   * Full-board mode: the reconstructed game state at the current position, via the
+   * adapter's `state` reducer over the delivered slice. Returns `null` unless the
+   * `fullBoard` flag is on AND a state reducer was supplied — so the mode is inert
+   * (and the reducer never runs) by default. The state shape `S` is the adapter's;
+   * the engine treats it as opaque.
+   *
+   * @returns {any}
+   */
+  state() {
+    if (!this._fullBoard) return null
+    const reduce = this._adapter.state
+    if (typeof reduce !== 'function') return null
+    return reduce(this._events.slice(0, this._cursor).map(e => e.record))
+  }
+
+  /**
    * Subscribe to delivered events. The handler receives the raw envelope record
    * (`{ seq, t, event, ... }`) — the payload stays opaque. Returns an unsubscribe.
    *
@@ -154,6 +189,20 @@ export class PlaybackClock {
   onProgress(handler) {
     this._progressHandlers.add(handler)
     return () => this._progressHandlers.delete(handler)
+  }
+
+  /**
+   * Full-board mode subscription: receive `{ position, state }` whenever the
+   * delivered set changes (play, seek forward, seek backward), where `state` is
+   * the adapter's reconstruction at that position. Inert unless the `fullBoard`
+   * flag is on and a state reducer was supplied. Returns an unsubscribe.
+   *
+   * @param {(update: { position: number, state: any }) => void} handler
+   * @returns {() => void}
+   */
+  onState(handler) {
+    this._stateHandlers.add(handler)
+    return () => this._stateHandlers.delete(handler)
   }
 
   /**
@@ -216,6 +265,7 @@ export class PlaybackClock {
    */
   _advanceTo(target) {
     const t = Math.min(Math.max(target, 0), this._duration)
+    const before = this._cursor
     while (this._cursor < this._events.length && this._events[this._cursor].offset <= t) {
       this._emit(this._events[this._cursor].record)
       this._cursor++
@@ -225,6 +275,7 @@ export class PlaybackClock {
     }
     this._position = t
     this._emitProgressIfChanged()
+    if (this._cursor !== before) this._emitState()
   }
 
   /** Deliver an event to all subscribers. */
@@ -240,6 +291,14 @@ export class PlaybackClock {
     this._lastProgress = progress
     const update = { position: this._position, progress }
     for (const handler of this._progressHandlers) handler(update)
+  }
+
+  /** Push a reconstructed board state to subscribers — only in active full-board mode. */
+  _emitState() {
+    if (!this._fullBoard || this._stateHandlers.size === 0) return
+    if (typeof this._adapter.state !== 'function') return
+    const update = { position: this._position, state: this.state() }
+    for (const handler of this._stateHandlers) handler(update)
   }
 
   /**

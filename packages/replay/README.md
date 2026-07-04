@@ -49,6 +49,21 @@ at offset `≤ t`, so the emitted `progress` matches the original run's progress
 Subscribe before playing to catch every update; call `progress()` for the current
 value at any time.
 
+### Full-board mode (flag-gated)
+
+With a `state` reducer and the `fullBoard` flag, the engine reconstructs the whole
+board at any point — `state()` for the current board, `onState` for a stream, and
+`seek(t)` rebuilds the exact state at `t`:
+
+```js
+const clock = new PlaybackClock(envelope, {}, adapter, { fullBoard: true })
+clock.onState(({ position, state }) => render(state))
+clock.seek(1500) // state() now reflects the board at 1500ms
+```
+
+Off by default: without the flag, `state()` is `null`, `onState` never fires, and
+the reducer never runs. See [docs/adapter-interface.md](./docs/adapter-interface.md).
+
 ## Offsets
 
 Each event fires at its **offset** — its recorded `t` minus the first event's
