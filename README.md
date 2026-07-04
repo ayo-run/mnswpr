@@ -2,6 +2,9 @@
 
 A growing collection of small browser games and the shared, reusable packages that power them.
 
+> [!Note]
+> This is forked from [mnswpr](https://github.com/ayo-run/mnswpr) with the intention of learning agent-assisted development
+
 # Roadmap
 
 - **Public APIs** — game-agnostic modules (core, move-log, replay, leaderboard, rating) built inside the first game.
@@ -15,8 +18,8 @@ A growing collection of small browser games and the shared, reusable packages th
 | -------------------- | -------------- | ------- | -------- |
 | `mnswpr` (game core) | ✅ Built       |         |          |
 | leaderboard          | ✅ Built       |         |          |
-| move-log             | 🚧 Development |         |          |
-| replay engine        | 🔮 Planned     |         |          |
+| move-log             | ✅ Built       |         |          |
+| replay engine        | 🚧 Development |         |          |
 | rating math          | 🔮 Planned     |         |          |
 | `sudoku` (game core) | 🔮 Planned     |         |          |
 
