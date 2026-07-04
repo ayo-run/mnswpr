@@ -64,6 +64,23 @@ clock.seek(1500) // state() now reflects the board at 1500ms
 Off by default: without the flag, `state()` is `null`, `onState` never fires, and
 the reducer never runs. See [docs/adapter-interface.md](./docs/adapter-interface.md).
 
+### The "ended" signal & partial recordings
+
+`onEnd` fires with `{ position }` when playback reaches the **last recorded
+event's offset**:
+
+```js
+clock.onEnd(({ position }) => showEndScreen())
+```
+
+The engine has no notion of a "terminal" event, so this is the *same* signal
+whether the run completed or the recording was **truncated mid-game**. A partial
+log plays up to its last event and stops cleanly in both progress and full-board
+modes — no error for the mere absence of a terminal event. Progress **freezes at
+its last computed value** (no extrapolation, no jump to 100%), because it's purely
+the reducer over the delivered events. The signal re-arms if you seek back before
+the end.
+
 ## Offsets
 
 Each event fires at its **offset** — its recorded `t` minus the first event's

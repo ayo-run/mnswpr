@@ -164,6 +164,10 @@ export class PlaybackClock {
     this._lastProgress = /** @type {number | null} */ (null)
     /** @type {Set<(update: { position: number, state: any }) => void>} */
     this._stateHandlers = new Set()
+    /** @type {Set<(update: { position: number }) => void>} */
+    this._endHandlers = new Set()
+    /** True once the end has been reached; re-arms when playback moves back before it. */
+    this._ended = false
   }
 
   /** Total playback length in ms (offset of the last event; 0 if empty). */
@@ -260,6 +264,21 @@ export class PlaybackClock {
   }
 
   /**
+   * Subscribe to the "ended" signal: fires with `{ position }` when playback
+   * reaches the last recorded event's offset — the SAME signal whether the run
+   * completed or the recording was truncated mid-game (the engine has no notion
+   * of a terminal event). Fires once on reaching the end and re-arms if playback
+   * moves back before it. Returns an unsubscribe.
+   *
+   * @param {(update: { position: number }) => void} handler
+   * @returns {() => void}
+   */
+  onEnd(handler) {
+    this._endHandlers.add(handler)
+    return () => this._endHandlers.delete(handler)
+  }
+
+  /**
    * Start (or resume) playback from the current position. Any event already due
    * at the current position fires synchronously; the rest are scheduled at their
    * offsets. No-op if already playing or already at the end.
@@ -330,6 +349,7 @@ export class PlaybackClock {
     this._position = t
     this._emitProgressIfChanged()
     if (this._cursor !== before) this._emitState()
+    this._maybeEmitEnded()
   }
 
   /** Deliver an event to all subscribers. */
@@ -345,6 +365,22 @@ export class PlaybackClock {
     this._lastProgress = progress
     const update = { position: this._position, progress }
     for (const handler of this._progressHandlers) handler(update)
+  }
+
+  /**
+   * Fire "ended" once when every recorded event has been delivered (the timeline
+   * reached the last event's offset); re-arm when playback moves back before it.
+   * Terminal-agnostic: a truncated recording ends here exactly like a complete one.
+   */
+  _maybeEmitEnded() {
+    const atEnd = this._events.length > 0 && this._cursor >= this._events.length
+    if (atEnd && !this._ended) {
+      this._ended = true
+      const update = { position: this._position }
+      for (const handler of this._endHandlers) handler(update)
+    } else if (!atEnd) {
+      this._ended = false
+    }
   }
 
   /** Push a reconstructed board state to subscribers — only in active full-board mode. */
