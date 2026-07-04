@@ -32,6 +32,23 @@ The reducer receives the ordered slice of events delivered so far; the engine
 clamps the result and stays blind to the payload. See
 [docs/adapter-interface.md](./docs/adapter-interface.md) for the full contract.
 
+### Progress mode: a signal over time
+
+`onProgress` turns the clock + reducer into a live "percent complete over elapsed
+time" signal — updates as playback advances, on seek forward, and on seek back:
+
+```js
+const clock = new PlaybackClock(envelope, {}, adapter)
+clock.onProgress(({ position, progress }) => draw(position, progress))
+clock.play()
+```
+
+Fidelity is exact: at playback time `t` the delivered set is precisely the events
+at offset `≤ t`, so the emitted `progress` matches the original run's progress at
+`t`. Updates fire only when the percentage moves (a flag/unflag emits nothing).
+Subscribe before playing to catch every update; call `progress()` for the current
+value at any time.
+
 ## Offsets
 
 Each event fires at its **offset** — its recorded `t` minus the first event's

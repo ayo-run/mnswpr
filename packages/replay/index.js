@@ -87,6 +87,10 @@ export class PlaybackClock {
     this._anchorPosition = 0
     /** @type {Set<(event: Event) => void>} */
     this._handlers = new Set()
+    /** @type {Set<(update: { position: number, progress: number }) => void>} */
+    this._progressHandlers = new Set()
+    /** Last progress value pushed, so unchanged progress (e.g. a flag) is not re-emitted. */
+    this._lastProgress = /** @type {number | null} */ (null)
   }
 
   /** Total playback length in ms (offset of the last event; 0 if empty). */
@@ -133,6 +137,23 @@ export class PlaybackClock {
   on(handler) {
     this._handlers.add(handler)
     return () => this._handlers.delete(handler)
+  }
+
+  /**
+   * Progress-mode subscription: receive `{ position, progress }` updates as
+   * playback advances — the "percent complete over elapsed time" signal. Fires
+   * only when the percentage actually changes (so flags/unflags, which don't
+   * advance progress, emit nothing), on play, seek forward, and seek backward.
+   * Requires an adapter with a `progress` reducer; without one it never emits.
+   * Subscribe before playing to catch every update; use {@link progress} for the
+   * current value at any time. Returns an unsubscribe.
+   *
+   * @param {(update: { position: number, progress: number }) => void} handler
+   * @returns {() => void}
+   */
+  onProgress(handler) {
+    this._progressHandlers.add(handler)
+    return () => this._progressHandlers.delete(handler)
   }
 
   /**
@@ -203,11 +224,22 @@ export class PlaybackClock {
       this._cursor--
     }
     this._position = t
+    this._emitProgressIfChanged()
   }
 
   /** Deliver an event to all subscribers. */
   _emit(record) {
     for (const handler of this._handlers) handler(record)
+  }
+
+  /** Push a progress update to subscribers, but only when the percentage moved. */
+  _emitProgressIfChanged() {
+    if (this._progressHandlers.size === 0) return
+    const progress = this.progress()
+    if (progress === null || progress === this._lastProgress) return
+    this._lastProgress = progress
+    const update = { position: this._position, progress }
+    for (const handler of this._progressHandlers) handler(update)
   }
 
   /**
