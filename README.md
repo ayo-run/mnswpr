@@ -11,14 +11,14 @@ A growing collection of small browser games and the shared, reusable packages th
 
 ## Packages
 
-| Package              | State          | Published | Documented |
-| -------------------- | -------------- | --------- | ---------- |
-| `mnswpr` (game core) | ✅ Built       |           |            |
-| leaderboard          | ✅ Built       |           |            |
-| move-log             | 🚧 Development |           |            |
-| replay engine        | 🔮 Planned     |           |            |
-| rating math          | 🔮 Planned     |           |            |
-| `sudoku` (game core) | 🔮 Planned     |           |            |
+| Package              | Develop        | Publish | Document |
+| -------------------- | -------------- | ------- | -------- |
+| `mnswpr` (game core) | ✅ Built       |         |          |
+| leaderboard          | ✅ Built       |         |          |
+| move-log             | 🚧 Development |         |          |
+| replay engine        | 🔮 Planned     |         |          |
+| rating math          | 🔮 Planned     |         |          |
+| `sudoku` (game core) | 🔮 Planned     |         |          |
 
 > Note: `@ayo-run/mnswpr` on npm predates this project and will be deprecated in favor of `cozy-games/mnswpr`.
 
