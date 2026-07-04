@@ -148,6 +148,57 @@ describe('generateBoard (Layer 2, pure)', () => {
   })
 })
 
+describe('generateBoard first-move-safe (safeCell)', () => {
+  it('never mines the safe cell across randomized runs (property-style)', () => {
+    // Dense board so the safe cell is a demanding constraint, swept over many
+    // injected-RNG streams — the guarantee must hold for every seed, not one.
+    for (let seed = 0; seed < 200; seed++) {
+      const layout = generateBoard(9, 9, 70, { rng: mulberry32(seed), safeCell: { r: 4, c: 5 } })
+      expect(layout.cells[4][5].mine).toBe(false)
+      // and it's a genuine constraint on top of a correct board: exact mine count
+      expect(layout.mineLocations).toHaveLength(70)
+    }
+  })
+
+  it('holds at edge coordinates — every corner and a border cell', () => {
+    const corners = [{ r: 0, c: 0 }, { r: 0, c: 8 }, { r: 8, c: 0 }, { r: 8, c: 8 }]
+    const borders = [{ r: 0, c: 4 }, { r: 4, c: 0 }, { r: 8, c: 4 }, { r: 4, c: 8 }]
+    for (const safeCell of [...corners, ...borders]) {
+      const layout = generateBoard(9, 9, 70, { seed: 123, safeCell })
+      expect(layout.cells[safeCell.r][safeCell.c].mine).toBe(false)
+    }
+  })
+
+  it('generates a max-density board (mines = cells − 1) with the one safe cell blank', () => {
+    // 3x3 with 8 mines: every cell except the safe one must be a mine.
+    const layout = generateBoard(3, 3, 8, { seed: 5, safeCell: { r: 1, c: 1 } })
+    expect(layout.mineLocations).toHaveLength(8)
+    expect(layout.cells[1][1].mine).toBe(false)
+    let mines = 0
+    for (const row of layout.cells) for (const cell of row) if (cell.mine) mines++
+    expect(mines).toBe(8)
+  })
+
+  it('merges with an existing exclude set rather than replacing it', () => {
+    const exclude = new Set([0]) // key 0 == cell (0,0)
+    const layout = generateBoard(5, 5, 23, { seed: 9, exclude, safeCell: { r: 4, c: 4 } })
+    expect(layout.cells[0][0].mine).toBe(false) // from exclude
+    expect(layout.cells[4][4].mine).toBe(false) // from safeCell
+    expect(layout.mineLocations).toHaveLength(23) // 25 − 2 excluded
+  })
+
+  it('rejects configurations where the mines cannot fit with the safe cell excluded', () => {
+    // 3x3 = 9 cells, one reserved for safety ⇒ capacity 8; 9 mines can't fit.
+    expect(() => generateBoard(3, 3, 9, { safeCell: { r: 0, c: 0 } })).toThrow(RangeError)
+  })
+
+  it('rejects an out-of-bounds or non-integer safe cell', () => {
+    expect(() => generateBoard(9, 9, 10, { safeCell: { r: 9, c: 0 } })).toThrow(RangeError)
+    expect(() => generateBoard(9, 9, 10, { safeCell: { r: -1, c: 0 } })).toThrow(RangeError)
+    expect(() => generateBoard(9, 9, 10, { safeCell: { r: 0, c: 1.5 } })).toThrow(RangeError)
+  })
+})
+
 describe('rules (Layer 2)', () => {
   it('first reveal is never a mine and opens a region', () => {
     const s = MinesweeperRules.init(3, beginner)

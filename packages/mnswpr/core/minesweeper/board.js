@@ -94,24 +94,45 @@ export function fillMines(rng, config, exclude, grid) {
  * wrapped with {@link mulberry32}, keeping generation reproducible and free of
  * `Math.random` (invariant #4).
  *
+ * First-move safety: pass `safeCell: { r, c }` to guarantee that cell is never a
+ * mine — the coordinate-friendly front door to the low-level `exclude` set, so
+ * callers don't have to know the `r * cols + c` key encoding. It merges with any
+ * `exclude` given, and the capacity check below rejects layouts where the mines
+ * can't fit once it's carved out. For 3x3 first-click *flood* safety (the clicked
+ * cell plus its 8 neighbors), see {@link excludeAround}.
+ *
  * @param {number} rows - number of rows (board height)
  * @param {number} cols - number of columns (board width)
  * @param {number} mines - number of mines to place
- * @param {{ rng?: () => number, seed?: number, exclude?: Set<number> }} [options]
+ * @param {{ rng?: () => number, seed?: number, exclude?: Set<number>, safeCell?: { r: number, c: number } }} [options]
  * @returns {Layout} a plain, serializable layout object
  */
-export function generateBoard(rows, cols, mines, { rng, seed = 0, exclude = NO_EXCLUDE } = {}) {
+export function generateBoard(rows, cols, mines, { rng, seed = 0, exclude = NO_EXCLUDE, safeCell } = {}) {
   if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || cols < 1) {
     throw new RangeError(`generateBoard: rows/cols must be positive integers (got ${rows}x${cols})`)
   }
-  const capacity = rows * cols - exclude.size
+
+  // Resolve the first-move-safe cell into the exclude set (non-mutating: never
+  // touch a caller-owned set). An out-of-bounds safeCell fails loudly rather than
+  // silently excluding nothing and handing back a board that could mine it.
+  let excludeSet = exclude
+  if (safeCell !== undefined) {
+    const { r, c } = safeCell
+    if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || c < 0 || r >= rows || c >= cols) {
+      throw new RangeError(`generateBoard: safeCell must be an in-bounds { r, c } (got { r: ${r}, c: ${c} } on ${rows}x${cols})`)
+    }
+    excludeSet = new Set(exclude)
+    excludeSet.add(r * cols + c)
+  }
+
+  const capacity = rows * cols - excludeSet.size
   if (!Number.isInteger(mines) || mines < 0 || mines > capacity) {
     throw new RangeError(`generateBoard: mines must be an integer in [0, ${capacity}] (got ${mines})`)
   }
 
   const config = { rows, cols, mines }
   const grid = new Grid(rows, cols, () => ({ mine: false, adjacent: 0, status: 'hidden' }))
-  fillMines(rng ?? mulberry32(seed), config, exclude, grid)
+  fillMines(rng ?? mulberry32(seed), config, excludeSet, grid)
 
   /** @type {LayoutCell[][]} */
   const cells = []
