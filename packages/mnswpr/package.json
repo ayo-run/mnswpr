@@ -20,6 +20,9 @@
     ".": {
       "default": "./dist/mnswpr.js"
     },
+    "./core": {
+      "default": "./core/index.js"
+    },
     "./dist/*": {
       "default": "./dist/*"
     },
