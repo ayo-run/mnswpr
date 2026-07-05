@@ -1,4 +1,4 @@
-# Headless core + client design — `@ayo-run/mnswpr/core` and the client that consumes it
+# Headless core + client design — `@cozy-games/mnswpr/core` and the client that consumes it
 
 Design for splitting the Minesweeper engine into a **headless, isomorphic core**
 (runs identically in a browser or on a server) and a **thin client** that renders
@@ -23,12 +23,12 @@ Goals, in priority order:
 ## 1. Package layout & the seam
 
 **Decision (settled): one published package, core exposed as a sub-path.** Open-
-source consumers keep installing a single `@ayo-run/mnswpr` and get the headless
-core for free at `@ayo-run/mnswpr/core` — no second package to publish, version,
+source consumers keep installing a single `@cozy-games/mnswpr` and get the headless
+core for free at `@cozy-games/mnswpr/core` — no second package to publish, version,
 or document. The DOM client stays the default entry (`.`).
 
 ```
-packages/mnswpr/                 # @ayo-run/mnswpr — ONE published package
+packages/mnswpr/                 # @cozy-games/mnswpr — ONE published package
   mnswpr.js                      # "."       → DOM client (browser entry; today's default)
   levels.js                      # shared by client + core (level presets)
   core/                          # "./core"  → headless, isomorphic, ZERO DOM, ZERO wall-clock
@@ -66,8 +66,8 @@ packages/mnswpr/                 # @ayo-run/mnswpr — ONE published package
 }
 ```
 
-- `import mnswpr from '@ayo-run/mnswpr'` → DOM client, exactly as today.
-- `import { GameSession, MinesweeperRules } from '@ayo-run/mnswpr/core'` → headless.
+- `import mnswpr from '@cozy-games/mnswpr'` → DOM client, exactly as today.
+- `import { GameSession, MinesweeperRules } from '@cozy-games/mnswpr/core'` → headless.
   The core entry pulls in **zero DOM**, so a server (later) imports it without
   dragging in browser code, and the browser bundle for `.` never includes the
   core's server-only helpers.
@@ -85,7 +85,7 @@ layering are orthogonal. Rules of the seam:
 
 When Sudoku lands, `core/grid/` and `core/session/` move out verbatim into
 `@cozy-games/grid` + `@cozy-games/game-session`; `core/minesweeper/` (and a new
-`sudoku/`) depend on them, and `@ayo-run/mnswpr/core` re-exports from them so the
+`sudoku/`) depend on them, and `@cozy-games/mnswpr/core` re-exports from them so the
 consumer-facing sub-path is unchanged.
 
 ---
@@ -346,7 +346,7 @@ Minesweeper(appId, version, {
 | Needs a host tier | no | yes (Function/Worker + session store) |
 | Use | offline play, published npm engine | host-owned sessions |
 
-The published `@ayo-run/mnswpr` stays fully functional standalone (Local mode).
+The published `@cozy-games/mnswpr` stays fully functional standalone (Local mode).
 Running on a host opts into Remote. Same renderer, same input, same rules.
 
 ---
@@ -425,7 +425,7 @@ appear in `core/` outside the injected `clock`/`rng` seams.
 
 ## 11. Open decisions
 
-- **Package boundary:** ✅ *resolved* — one `@ayo-run/mnswpr` package, core at the
+- **Package boundary:** ✅ *resolved* — one `@cozy-games/mnswpr` package, core at the
   `./core` sub-path (§1). Extraction to `@cozy-games/grid` + `@cozy-games/game-session`
   deferred to when Sudoku lands; the sub-path stays stable across that move.
 - **Host mode (replay-validation vs live authority):** *deferred.* Ship

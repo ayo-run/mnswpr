@@ -17,7 +17,7 @@
     "build": "pnpm -r --filter \"./packages/*\" run build",
     "build:lib": "vite build packages/mnswpr",
     "publish:lib": "node scripts/publish-lib.js",
-    "release": "pnpm build:lib && pnpm -F @ayo-run/mnswpr run release && pnpm publish:lib",
+    "release": "pnpm build:lib && pnpm -F @cozy-games/mnswpr run release && pnpm publish:lib",
     "postinstall": "node scripts/ensure-java.mjs",
     "prepare": "husky",
     "lint": "eslint .",

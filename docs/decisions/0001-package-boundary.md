@@ -3,7 +3,7 @@
 **Status:** Accepted · **Repo:** cozy-games · **Date:** 2026-07
 
 ## Context
-cozy-games is a collection of reusable game modules (`@ayo-run/mnswpr`, the
+cozy-games is a collection of reusable game modules (`@cozy-games/mnswpr`, the
 leaderboard package, future extractions). Applications built on these packages
 differ in how they store data, authenticate users, and enforce rules.
 

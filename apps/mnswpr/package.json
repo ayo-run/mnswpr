@@ -18,7 +18,7 @@
     "db:stop": "pkill -f '[c]loud-firestore-emulator'; pkill -f '[f]irebase.* emulators:'; true"
   },
   "devDependencies": {
-    "@ayo-run/mnswpr": "workspace:*",
+    "@cozy-games/mnswpr": "workspace:*",
     "@cozy-games/leaderboard": "workspace:*",
     "@cozy-games/utils": "workspace:*",
     "firebase": "^12.11.0",

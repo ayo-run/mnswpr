@@ -20,14 +20,14 @@ The goal is to reveal every safe cell without detonating a mine. Your **first cl
 The web is a wonderful, free, and open platform to create and distribute value. You can use **mnswpr** in different ways:
 
 - as a deployed [web app](https://mnswpr.com)
-- as a [library](https://npmx.dev/package/@ayo-run/mnswpr) with `npm i @ayo-run/mnswpr`
+- as a [library](https://npmx.dev/package/@cozy-games/mnswpr) with `npm i @cozy-games/mnswpr`
 - as a `web component` (coming soon).
 
 Using it as a library takes only a few lines — mount it onto any element by `id`:
 
 ```js
-import '@ayo-run/mnswpr/mnswpr.css'
-import mnswpr from '@ayo-run/mnswpr'
+import '@cozy-games/mnswpr/mnswpr.css'
+import mnswpr from '@cozy-games/mnswpr'
 
 const game = new mnswpr('app')
 game.initialize()

@@ -50,12 +50,12 @@ importers:
 
   apps/mnswpr:
     devDependencies:
-      '@ayo-run/mnswpr':
-        specifier: workspace:*
-        version: link:../../packages/mnswpr
       '@cozy-games/leaderboard':
         specifier: workspace:*
         version: link:../../packages/leaderboard
+      '@cozy-games/mnswpr':
+        specifier: workspace:*
+        version: link:../../packages/mnswpr
       '@cozy-games/utils':
         specifier: workspace:*
         version: link:../../packages/utils

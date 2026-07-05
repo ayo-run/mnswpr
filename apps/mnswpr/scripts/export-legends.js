@@ -17,7 +17,7 @@ import {
   getFirestore, getDocs, collection, query, orderBy, limit
 } from 'firebase/firestore/lite'
 
-import { levels } from '@ayo-run/mnswpr/levels.js'
+import { levels } from '@cozy-games/mnswpr/levels.js'
 
 // Mirror of TimerService.pretty() (@cozy-games/utils timer) — inlined so this
 // generator has no cross-module import chain to resolve under raw Node.

@@ -1,7 +1,7 @@
 // @ts-check
 
 /**
- * `@ayo-run/mnswpr/core` — the headless, isomorphic Minesweeper core. No DOM, no
+ * `@cozy-games/mnswpr/core` — the headless, isomorphic Minesweeper core. No DOM, no
  * wall clock. Runs identically in a browser (offline play) or on a server
  * (authoritative timing / replay verification). See
  * docs/headless-core-and-client-design.md.

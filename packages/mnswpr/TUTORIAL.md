@@ -61,7 +61,7 @@ npm i -D vite
 Now that the JS project is initialized and we have a development environment with `vite`, we will install **mnswpr** as a dependency:
 
 ```bash
-npm i @ayo-run/mnswpr
+npm i @cozy-games/mnswpr
 ```
 
 Finally, you can run the installed `vite` dev server by running the following:
@@ -141,8 +141,8 @@ Create a new file named `main.js` with the following content:
 /**
  * main.js
  */
-import '@ayo-run/mnswpr/mnswpr.css'
-import mnswpr from '@ayo-run/mnswpr'
+import '@cozy-games/mnswpr/mnswpr.css'
+import mnswpr from '@cozy-games/mnswpr'
 
 const game = new mnswpr('app')
 game.initialize()

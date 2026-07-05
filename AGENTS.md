@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository.
 
 ## What this is
 
-Classic Minesweeper as a vanilla web game — no framework, no TypeScript (JSDoc + `// @ts-check` only). Deployed at [mnswpr.com](https://mnswpr.com) (Netlify) and published to npm as `@ayo-run/mnswpr`. The game engine has **zero runtime dependencies**; only the website adds Firebase.
+Classic Minesweeper as a vanilla web game — no framework, no TypeScript (JSDoc + `// @ts-check` only). Deployed at [mnswpr.com](https://mnswpr.com) (Netlify) and published to npm as `@cozy-games/mnswpr`. The game engine has **zero runtime dependencies**; only the website adds Firebase.
 
 **`mnswpr` is the main test app.** It's the reference app for the monorepo and the default target for local runs — `.claude/launch.json` launches it (`dev` on :5173, `preview` on :4173), and it's what you should build/run/preview when verifying changes to the shared packages or tooling.
 
@@ -79,8 +79,8 @@ Node version: `.nvmrc` pins `lts/*`.
 
 This is the **Cozy Games** monorepo. Workspaces are declared in `pnpm-workspace.yaml` as `apps/*`, `packages/*`, and `sites/*`. `utils/` is now a real workspace package (`@cozy-games/utils`), imported by name — no more `../utils` relative paths.
 
-- **`apps/mnswpr/`** — package `mnswpr`, `@ayo-run/mnswpr`'s host, the mnswpr.com website. Consumes the engine and leaderboard via `workspace:*` (`import mnswpr from '@ayo-run/mnswpr/mnswpr.js'`) and wires them together in `apps/mnswpr/main.js`. Owns its Firebase config (`firebase.json`, `firestore.rules`, `.firebaserc`) and app-specific scripts (`apps/mnswpr/scripts/`). A future app (e.g. sudoku) gets its own `apps/<name>/` and its `package.json` `name` is just the app name (`<name>`, unscoped) so it's addressable directly by name (`pnpm -F <name> run <script>`).
-- **`packages/mnswpr/`** — `@ayo-run/mnswpr`, the standalone, framework-free game engine published to npm. `packages/mnswpr/mnswpr.js` is the whole engine; `levels.js` defines the four difficulty presets. Depends only on `@cozy-games/utils`.
+- **`apps/mnswpr/`** — package `mnswpr`, `@cozy-games/mnswpr`'s host, the mnswpr.com website. Consumes the engine and leaderboard via `workspace:*` (`import mnswpr from '@cozy-games/mnswpr/mnswpr.js'`) and wires them together in `apps/mnswpr/main.js`. Owns its Firebase config (`firebase.json`, `firestore.rules`, `.firebaserc`) and app-specific scripts (`apps/mnswpr/scripts/`). A future app (e.g. sudoku) gets its own `apps/<name>/` and its `package.json` `name` is just the app name (`<name>`, unscoped) so it's addressable directly by name (`pnpm -F <name> run <script>`).
+- **`packages/mnswpr/`** — `@cozy-games/mnswpr`, the standalone, framework-free game engine published to npm. `packages/mnswpr/mnswpr.js` is the whole engine; `levels.js` defines the four difficulty presets. Depends only on `@cozy-games/utils`.
 - **`packages/leaderboard/`** — `@cozy-games/leaderboard`, a backend-agnostic, time-windowed leaderboard (adapter-injected storage).
 - **`packages/utils/`** — `@cozy-games/utils`, shared services with no dependencies, re-exported from `index.js`: `StorageService`, `TimerService` (`pretty()` time formatting used by both engine and leaderboard), `LoggerService`, `LoadingService`, and date-bucket helpers.
 - **`sites/`** — docs (Astro Starlight) and UI demos. Placeholders for now.

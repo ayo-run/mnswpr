@@ -146,7 +146,7 @@ export function validateLayout(layout) {
 /**
  * Pure, Node-runnable board generation: given a size, a mine count, and an
  * injected RNG, produce a plain layout object — no DOM, no I/O, no `Grid` class
- * leaking out. This is the headless entry point behind `@ayo-run/mnswpr/core`;
+ * leaking out. This is the headless entry point behind `@cozy-games/mnswpr/core`;
  * the DOM client reaches the same generator lazily through `MinesweeperRules`.
  *
  * The injected `rng` is the determinism seam: the same rng sequence always

@@ -1,4 +1,4 @@
-// Publishes @ayo-run/mnswpr to npm using the mnswpr app README.md as the
+// Publishes @cozy-games/mnswpr to npm using the mnswpr app README.md as the
 // package's README (what npmjs.com displays).
 //
 // packages/mnswpr/README.md is a generated copy (gitignored) — the source of
