@@ -69,8 +69,8 @@ importers:
         specifier: ^26.1.0
         version: 26.1.0(@types/node@25.5.2)(picomatch@4.0.4)(supports-color@10.2.2)
       web-component-base:
-        specifier: ^4.1.2
-        version: 4.1.2
+        specifier: ^5.0.0
+        version: 5.0.0
 
   packages/leaderboard:
     dependencies:
@@ -78,8 +78,8 @@ importers:
         specifier: ^12.11.0
         version: 12.11.0
       web-component-base:
-        specifier: ^4.1.2
-        version: 4.1.2
+        specifier: ^5.0.0
+        version: 5.0.0
     devDependencies:
       '@cozy-games/utils':
         specifier: workspace:*
@@ -6412,8 +6412,8 @@ packages:
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
 
-  web-component-base@4.1.2:
-    resolution: {integrity: sha512-Jti4FHgCcwtsFWJ+PPwFNhTm5AJVIHrTXDew0rk2Y3b8EChRIE5xr6fmUni43tOhc6w8HatvR3k+qnxjXr/7Mw==}
+  web-component-base@5.0.0:
+    resolution: {integrity: sha512-93W5bhqy0YkyOFI+4V6U7BNVbLR242CyGDKLuNIYekq2J4P4kg3qcWPbtQDNpa7LvZz/M8p86PzI+Mmq5/fvkw==}
 
   web-streams-polyfill@3.3.3:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
@@ -13869,7 +13869,7 @@ snapshots:
     dependencies:
       defaults: 1.0.4
 
-  web-component-base@4.1.2: {}
+  web-component-base@5.0.0: {}
 
   web-streams-polyfill@3.3.3: {}
 

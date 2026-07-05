@@ -25,7 +25,7 @@
     "./dist"
   ],
   "dependencies": {
-    "web-component-base": "^4.1.2"
+    "web-component-base": "^5.0.0"
   },
   "devDependencies": {
     "@cozy-games/utils": "workspace:*"

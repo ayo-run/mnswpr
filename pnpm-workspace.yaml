@@ -12,3 +12,5 @@ allowBuilds:
   sharp: false
   unix-dgram: false
   web-component-base: false
+minimumReleaseAgeExclude:
+  - web-component-base@5.0.0

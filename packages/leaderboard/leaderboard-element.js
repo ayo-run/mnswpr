@@ -6,18 +6,19 @@ import { DURATIONS } from './leaderboard-read.js'
  * `<cozy-leaderboard>` — a custom element that lets a developer compose the
  * leaderboard UI declaratively in HTML instead of wiring it in JavaScript.
  *
- * Built on `web-component-base` (WCB) the idiomatic way: the view is a pure
- * `html` template over a precomputed view-state object, WCB's own
- * `attributeChangedCallback` feeds observed attributes into `this.props` and
- * the `onChanges` hook, and updates go through the base class's `render()`.
- * Data access and user-facing strings stay in {@link LeaderBoardService} /
- * LeaderBoardReader — the element only turns query results into templates.
+ * Built on `web-component-base` (WCB) the idiomatic way: the observed
+ * attributes are declared as `static props` (typed defaults; the base derives
+ * observedAttributes and feeds values into the reactive `this.props`), the view
+ * is a pure `html` template over a precomputed view-state object, and change
+ * reactions arrive through the `onChanges` hook. Data access and user-facing
+ * strings stay in {@link LeaderBoardService} / LeaderBoardReader — the element
+ * only turns query results into templates.
  *
- * `static props` is deliberately NOT used: WCB 4.1.2 writes each prop's
- * default onto the element as an attribute inside the constructor, which the
- * custom-elements spec forbids during synchronous construction — it breaks
- * `document.createElement('cozy-leaderboard')` entirely. Plain
- * `observedAttributes` + `onChanges` gives the same reactivity without that.
+ * (WCB ≥5 is required: v4 wrote each prop default onto the element as an
+ * attribute inside the constructor, which the custom-elements spec forbids and
+ * which broke `document.createElement('cozy-leaderboard')`. v5 defers that
+ * reflection to connect and never clobbers authored attributes, making
+ * `static props` safe here.)
  *
  * Composition lives in HTML attributes; the storage backend (adapter) is set
  * once in JS via configureLeaderboard(), because env-var config can't live in
@@ -61,10 +62,6 @@ const prettyTime = ms => {
 const FORMATTERS = { time: prettyTime }
 const resolveFormat = name => FORMATTERS[name]
 
-// WCB coerces an empty attribute value to a non-string (`'' -> true`), so
-// observed values are read through this guard before use.
-const str = value => (typeof value === 'string' ? value : '')
-
 // Inline styles (as WCB `html` style objects) — the same visual output the
 // LeaderBoardReader produces for the imperative JS composition path.
 const STYLES = {
@@ -97,8 +94,16 @@ const tabStyle = active => ({
 
 export class CozyLeaderboard extends WebComponent {
 
-  static get observedAttributes() {
-    return ['category', 'title', 'duration', 'score-order', 'format']
+  // Declared attributes (kebab-cased on the element: score-order). String
+  // defaults keep `this.props.*` typed as strings, so an unset or emptied
+  // attribute reads as '' rather than a coerced boolean. The base class derives
+  // observedAttributes from these keys.
+  static props = {
+    category: '',
+    title: '',
+    duration: '',
+    scoreOrder: '',
+    format: ''
   }
 
   // View state the template renders from. Either { board: false } (not
@@ -125,17 +130,17 @@ export class CozyLeaderboard extends WebComponent {
   }
 
   /**
-   * WCB change hook — `property` is the attribute (kebab-case) name. A title
-   * change needs no re-query: the heading reads `this.props.title`, so WCB's
-   * own render already updated it. score-order/format changes rebuild the
-   * service so the new config actually takes effect.
+   * WCB change hook — `property` is the camelCase prop name (WCB ≥5). A title
+   * change needs no re-query: the heading reads `this.props.title`, so the base
+   * class's own render already updated it. score-order/format changes rebuild
+   * the service so the new config actually takes effect.
    */
-  onChanges({ property, currentValue }) {
-    // Invalidate the cached service even while disconnected, so a score-order/
+  onChanges({ property }) {
+    // Invalidate the cached service even while disconnected, so a scoreOrder/
     // format change made on a detached element takes effect on re-connect.
-    if (property === 'score-order' || property === 'format') this._svc = null
+    if (property === 'scoreOrder' || property === 'format') this._svc = null
     if (!this._connected || property === 'title') return
-    this._mount(property === 'duration' ? (str(currentValue) || undefined) : undefined)
+    this._mount(property === 'duration' ? (this.props.duration || undefined) : undefined)
   }
 
   get template() {
@@ -143,7 +148,7 @@ export class CozyLeaderboard extends WebComponent {
     if (!view.board) return html`<em>Leaderboard not configured.</em>`
     return html`
       <div style=${STYLES.wrapper}>
-        <h3 style=${STYLES.heading}>${str(this.props.title)}</h3>
+        <h3 style=${STYLES.heading}>${this.props.title}</h3>
         <div style=${STYLES.tabBar}>
           ${view.tabs.map(tab => html`
             <button
@@ -184,13 +189,13 @@ export class CozyLeaderboard extends WebComponent {
     const adapter = this.adapter || sharedConfig.adapter
     if (!adapter) return null
     const formatScore = this.formatScore
-      || resolveFormat(str(this.props.format))
+      || resolveFormat(this.props.format)
       || sharedConfig.formatScore
       || resolveFormat(sharedConfig.format)
       || String
     this._svc = new LeaderBoardService({
       adapter,
-      scoreOrder: str(this.props.scoreOrder) || sharedConfig.scoreOrder || 'asc',
+      scoreOrder: this.props.scoreOrder || sharedConfig.scoreOrder || 'asc',
       formatScore,
       qualifies: this.qualifies || sharedConfig.qualifies,
       // User-facing strings — pass through so apps localize without touching the package.
@@ -219,7 +224,7 @@ export class CozyLeaderboard extends WebComponent {
     }
     const duration = durationArg
       ?? this._activeDuration
-      ?? (str(this.props.duration) || 'today')
+      ?? (this.props.duration || 'today')
     this._activeDuration = duration
     this._load(service, duration)
   }
@@ -246,7 +251,7 @@ export class CozyLeaderboard extends WebComponent {
 
     let list
     try {
-      const rows = await reader.list(str(this.props.category), durationId)
+      const rows = await reader.list(this.props.category, durationId)
       list = (rows && rows.length)
         ? {
           rows: rows.map((row, index) => ({
