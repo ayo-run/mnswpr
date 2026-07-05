@@ -249,7 +249,8 @@ export class LeaderBoardReader {
 
       const nameElement = document.createElement('div')
       const name = data.name || this.anonymousName
-      nameElement.innerHTML = name
+      // textContent, never innerHTML: names are player-controlled input.
+      nameElement.textContent = name
       nameElement.setAttribute('title', name)
       nameElement.style.textOverflow = 'ellipsis'
       nameElement.style.whiteSpace = 'nowrap'

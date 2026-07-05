@@ -131,8 +131,10 @@ export class CozyLeaderboard extends WebComponent {
    * service so the new config actually takes effect.
    */
   onChanges({ property, currentValue }) {
-    if (!this._connected || property === 'title') return
+    // Invalidate the cached service even while disconnected, so a score-order/
+    // format change made on a detached element takes effect on re-connect.
     if (property === 'score-order' || property === 'format') this._svc = null
+    if (!this._connected || property === 'title') return
     this._mount(property === 'duration' ? (str(currentValue) || undefined) : undefined)
   }
 
@@ -269,7 +271,9 @@ export class CozyLeaderboard extends WebComponent {
    * focus is handed to the replacement tab explicitly.
    */
   _paint() {
-    const focused = document.activeElement
+    // getRootNode(), not document: inside a shadow root, document.activeElement
+    // is retargeted to the host and the focused tab would go undetected.
+    const focused = this.getRootNode().activeElement
     const focusedTab = focused && this.contains(focused) ? focused.dataset.duration : undefined
     this.render()
     if (focusedTab) this.querySelector(`button[data-duration="${focusedTab}"]`)?.focus()

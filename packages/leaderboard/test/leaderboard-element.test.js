@@ -428,4 +428,165 @@ describe('submit()', () => {
     await el.submit(entry())
     expect(adapter.addScore).not.toHaveBeenCalled()
   })
+
+  it('is a safe no-op on an unconfigured element', async () => {
+    const el = mount({ category: 'beginner', title: 'T' })
+    await vi.waitFor(() => expect(rowsText(el)).toContain('Leaderboard not configured.'))
+    expect(el.submit(entry())).toBeUndefined()
+  })
+})
+
+describe('regressions pinned after review', () => {
+  it('renders entry names as text, never as HTML (element path)', async () => {
+    const adapter = makeAdapter([{ name: '<img src=x onerror=alert(1)>', score: 1 }])
+    const el = mount({ category: 'b', title: 'T' }, { adapter })
+    await vi.waitFor(() => expect(rowsText(el)).toContain('<img src=x onerror=alert(1)>'))
+    expect(el.querySelector('img')).toBeNull()
+  })
+
+  it('an invalid duration id shows the error text without querying the adapter', async () => {
+    const adapter = makeAdapter([{ name: 'Ada', score: 1 }])
+    const el = mount({ category: 'b', title: 'T', duration: 'yesterday' }, { adapter })
+    await vi.waitFor(() =>
+      expect(rowsText(el)).toContain('Leaderboard unavailable right now.'))
+    expect(adapter.listScores).not.toHaveBeenCalled()
+  })
+
+  it('a title change does not re-query the backend', async () => {
+    const adapter = makeAdapter([])
+    const el = mount({ category: 'b', title: 'T' }, { adapter })
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(1))
+
+    el.setAttribute('title', 'New Title')
+    await vi.waitFor(() => expect(el.querySelector('h3').textContent).toBe('New Title'))
+    expect(adapter.listScores).toHaveBeenCalledTimes(1)
+  })
+
+  it('a score-order change after mount takes effect on the next query', async () => {
+    const adapter = makeAdapter([])
+    const el = mount({ category: 'b', title: 'T', 'score-order': 'asc' }, { adapter })
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(1))
+    expect(adapter.listScores.mock.calls[0][0].order).toBe('asc')
+
+    el.setAttribute('score-order', 'desc')
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(2))
+    expect(adapter.listScores.mock.calls[1][0].order).toBe('desc')
+  })
+
+  it('a format change after mount takes effect on the next render', async () => {
+    const adapter = makeAdapter([{ name: 'Ada', score: 4200 }])
+    const el = mount({ category: 'b', title: 'T' }, { adapter })
+    await vi.waitFor(() => expect(rowsText(el)).toContain('4200'))
+
+    el.setAttribute('format', 'time')
+    await vi.waitFor(() => expect(rowsText(el)).toContain('04.2'))
+  })
+
+  it('a score-order change while detached takes effect on re-connect', async () => {
+    const adapter = makeAdapter([])
+    const el = mount({ category: 'b', title: 'T', 'score-order': 'asc' }, { adapter })
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(1))
+
+    el.remove()
+    el.setAttribute('score-order', 'desc')
+    document.body.append(el)
+    await vi.waitFor(() => {
+      const calls = adapter.listScores.mock.calls
+      expect(calls[calls.length - 1][0].order).toBe('desc')
+    })
+  })
+
+  it('configureLeaderboard() re-mounts every live element, keeping each selected tab', async () => {
+    const adapter = makeAdapter([])
+    configureLeaderboard({ adapter })
+    const one = mount({ category: 'a', title: 'One' })
+    const two = mount({ category: 'b', title: 'Two' })
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(2))
+
+    tabByLabel(two, 'Week').click()
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(3))
+
+    // Re-configuring re-mounts BOTH live elements (string overrides won't
+    // apply to their already-cached services — pinned separately below).
+    configureLeaderboard({})
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(5))
+    // element two kept its Week selection through the shared re-mount
+    await vi.waitFor(() => {
+      expect(tabByLabel(two, 'Week').style.fontWeight).toBe('bold')
+      expect(tabByLabel(one, 'Today').style.fontWeight).toBe('bold')
+    })
+  })
+
+  it('a detached element is not re-mounted by configureLeaderboard, but remembers its tab on re-connect', async () => {
+    const adapter = makeAdapter([])
+    const el = mount({ category: 'b', title: 'T' }, { adapter })
+    await vi.waitFor(() => expect(tabButtons(el)).toHaveLength(4))
+    tabByLabel(el, 'Month').click()
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(2))
+
+    el.remove()
+    const callsWhileDetached = adapter.listScores.mock.calls.length
+    configureLeaderboard({ loadingText: 'Wait…' })
+    expect(adapter.listScores.mock.calls.length).toBe(callsWhileDetached)
+
+    document.body.append(el)
+    await vi.waitFor(() =>
+      expect(tabByLabel(el, 'Month').style.fontWeight).toBe('bold'))
+  })
+
+  it('keeps the cached service (old adapter) when configureLeaderboard swaps adapters later', async () => {
+    const first = makeAdapter([])
+    configureLeaderboard({ adapter: first })
+    mount({ category: 'b', title: 'T' })
+    await vi.waitFor(() => expect(first.listScores).toHaveBeenCalledTimes(1))
+
+    const second = makeAdapter([])
+    configureLeaderboard({ adapter: second })
+    await vi.waitFor(() => expect(first.listScores).toHaveBeenCalledTimes(2))
+    expect(second.listScores).not.toHaveBeenCalled() // documented caching semantics
+  })
+
+  it('keeps the cached service (old strings) when configureLeaderboard changes strings later', async () => {
+    const adapter = makeAdapter([])
+    configureLeaderboard({ adapter })
+    const el = mount({ category: 'b', title: 'T' })
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(1))
+
+    configureLeaderboard({ emptyMessages: ['Nothing here yet.'] })
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(2))
+    // the already-built service keeps its original strings (documented caching)
+    expect(rowsText(el)).not.toContain('Nothing here yet.')
+  })
+
+  it('keeps focus on a clicked tab when composed inside a shadow root', async () => {
+    const adapter = makeAdapter([])
+    const host = document.createElement('div')
+    const shadow = host.attachShadow({ mode: 'open' })
+    const el = /** @type {any} */ (document.createElement('cozy-leaderboard'))
+    el.setAttribute('category', 'b')
+    el.setAttribute('title', 'T')
+    el.adapter = adapter
+    shadow.append(el)
+    document.body.append(host)
+    await vi.waitFor(() => expect(el.querySelectorAll('button')).toHaveLength(4))
+
+    const week = [...el.querySelectorAll('button')].find(b => b.textContent === 'Week')
+    week.focus()
+    week.click()
+    await vi.waitFor(() => expect(adapter.listScores).toHaveBeenCalledTimes(2))
+    expect(shadow.activeElement?.textContent).toBe('Week')
+  })
+
+  it('pins prettyTime edge cases through the format attribute', async () => {
+    const adapter = makeAdapter([
+      { name: 'Zero', score: 0 },
+      { name: 'Minute', score: 60000 }
+    ])
+    const el = mount({ category: 'b', title: 'T', format: 'time' }, { adapter })
+    await vi.waitFor(() => {
+      expect(rowsText(el)).toContain('Zero')
+      expect(rowsText(el)).toContain('0') // falsy score -> '0'
+      expect(rowsText(el)).toContain('01:0') // exact minute -> '01:0'
+    })
+  })
 })

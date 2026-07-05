@@ -43,7 +43,7 @@ describe('read surface — usable standalone (no writes)', () => {
     expect(el.querySelectorAll('button')).toHaveLength(4) // four duration tabs
     expect(listScores).toHaveBeenCalledTimes(1)           // 'today' window loaded once
 
-    // The list fills asynchronously — wait for the rows to appear (names use innerHTML).
+    // The list fills asynchronously — wait for the rows to appear (names render as text).
     await vi.waitFor(() => {
       expect(el.textContent).toContain('Ada')
       expect(el.textContent).toContain('Bo')
@@ -51,6 +51,16 @@ describe('read surface — usable standalone (no writes)', () => {
 
     // Reader exposes no write API.
     expect(typeof (/** @type {any} */ (reader).submit)).toBe('undefined')
+  })
+
+  it('renders entry names as text, never as HTML (names are player-controlled)', async () => {
+    const listScores = vi.fn(async () => [{ name: '<img src=x onerror=alert(1)>', score: 1 }])
+    const reader = new LeaderBoardReader({ adapter: { listScores } })
+
+    const el = await reader.render('beginner', 'Best Times')
+    await vi.waitFor(() =>
+      expect(el.textContent).toContain('<img src=x onerror=alert(1)>'))
+    expect(el.querySelector('img')).toBeNull()
   })
 })
 
