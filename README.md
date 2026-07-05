@@ -3,7 +3,7 @@
 A growing collection of small browser games and the shared, reusable packages that power them.
 
 > [!Note]
-> This repo was originally for [mnswpr](https://mnswpr.com) (see its [README](apps/mnswpr/README.md)) which has been evolved in *2026* to understand AI-assisted development. The purpose of mnswpr has always included understanding the web development landscape and this has changed significantly with the rise of LLMs.
+> This repo was originally for [mnswpr](https://mnswpr.com) (see its [README](apps/mnswpr/README.md)) which has been evolved in _2026_ to understand AI-assisted development. The purpose of mnswpr has always included understanding the web development landscape and this has changed significantly with the rise of LLMs.
 
 # Roadmap
 
@@ -14,14 +14,14 @@ A growing collection of small browser games and the shared, reusable packages th
 
 ## Packages
 
-| Package              | Develop        | Publish | Document |
-| -------------------- | -------------- | ------- | -------- |
-| `mnswpr` (game core) | ✅ Built       |         |          |
-| leaderboard          | ✅ Built       |         |          |
-| move-log             | ✅ Built       |         |          |
-| replay engine        | ✅ Built       |         |          |
-| rating math          | 🚧 Development |         |          |
-| `sudoku` (game core) | 🔮 Planned     |         |          |
+| Package              | Develop        | Publish                    | 
+| -------------------- | -------------- | -------------------------- |
+| `mnswpr` (game core) | ✅ Built       | ✅ @cozy-games/mnswpr      |
+| leaderboard          | ✅ Built       | ✅ @cozy-games/leaderboard |
+| move-log             | ✅ Built       |                            |
+| replay engine        | ✅ Built       |                            |
+| rating math          | 🚧 Development |                            |
+| `sudoku` (game core) | 🔮 Planned     |                            |
 
 > Note: `@ayo-run/mnswpr` on npm predates this project and will be deprecated in favor of `cozy-games/mnswpr`.
 
