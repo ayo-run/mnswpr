@@ -9,6 +9,9 @@
     "url": "https://github.com/ayo-run/mnswpr"
   },
   "main": "leader-board.js",
+  "scripts": {
+    "build": "vite build"
+  },
   "exports": {
     ".": {
       "default": "./dist/leader-board.js"

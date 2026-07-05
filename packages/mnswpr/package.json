@@ -1,5 +1,5 @@
 {
-  "name": "@ayo-run/mnswpr",
+  "name": "@cozy-games/mnswpr",
   "version": "0.4.36",
   "description": "Classic Minesweeper browser game",
   "author": "Ayo",
@@ -10,6 +10,7 @@
   },
   "homepage": "https://mnswpr.com",
   "scripts": {
+    "build": "vite build",
     "release": "bumpp && node ../../scripts/release.js"
   },
   "main": "mnswpr.js",
