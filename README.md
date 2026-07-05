@@ -3,7 +3,7 @@
 A growing collection of small browser games and the shared, reusable packages that power them.
 
 > [!Note]
-> This is forked from [mnswpr](https://github.com/ayo-run/mnswpr) with the intention of learning agent-assisted development
+> This is a repo was originally for [mnswpr](https://mnswpr.com) (see its [README](apps/mnswpr/README.md)) which has been evolved in *2026* to understand AI-assisted development. The purpose of mnswpr has always included understanding the web development landscape and this has changed significantly with the rise of LLMs.
 
 # Roadmap
 
