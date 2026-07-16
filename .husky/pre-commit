@@ -9,3 +9,8 @@ if [ -n "$staged" ]; then
   echo "secret-scan (staged files)..."
   printf '%s\n' "$staged" | xargs -r -d '\n' npx secretlint --secretlintignore .secretlintignore
 fi
+
+# Content policy check of the staged diff and the branch name. Config:
+# .repo-policy.json. Full-tree sweep: `node scripts/check-content.mjs --all`.
+echo "content-check (staged)..."
+node scripts/check-content.mjs --staged --branch "$(git branch --show-current)"

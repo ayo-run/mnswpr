@@ -1,0 +1,94 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Set node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Set node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test
+
+  content:
+    runs-on: ubuntu-latest
+    steps:
+      # Full history: the scan walks a commit range.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      # No install — the scanner has no dependencies.
+      - name: Scan the pull request range
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags --quiet origin "$BASE_REF"
+          node scripts/check-content.mjs --range "origin/$BASE_REF...HEAD"
+
+      # Title and body reach the script as files, never as inline shell.
+      - name: Scan the pull request title and body
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title.txt"
+          printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
+          node scripts/check-content.mjs --text "$RUNNER_TEMP/pr-title.txt" --text "$RUNNER_TEMP/pr-body.txt"
+
+      - name: Scan the head branch name
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: node scripts/check-content.mjs --branch "$HEAD_REF"
+
+      - name: Scan the pushed range
+        if: github.event_name == 'push'
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          # A new branch or a force-push can leave `before` unreachable.
+          before="$PUSH_BEFORE"
+          if ! git rev-parse --quiet --verify "$before^{commit}" > /dev/null; then
+            before="$(git rev-parse "$PUSH_AFTER~1")"
+          fi
+          node scripts/check-content.mjs --range "$before..$PUSH_AFTER"

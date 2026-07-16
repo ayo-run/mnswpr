@@ -116,6 +116,20 @@ backend config.
 
 For anything large, open an issue to discuss the approach first.
 
+## Commit & PR hygiene
+
+Write commit messages in plain project voice — what changed and why. Keep them
+free of tool-attribution trailers or footers (including `Co-Authored-By:` lines
+for anyone who isn't a human contributor) and of session links; the same goes for
+PR titles and bodies.
+
+CI also checks your changes against a maintainer-managed reserved-terms list. If a
+check flags your change, reword it — or ask a maintainer if it isn't clear why.
+The checks run locally too: the pre-commit hook scans staged changes and your
+branch name, and the commit-msg hook scans the message. If a line legitimately
+needs wording a check objects to (prose *about* these topics, say), put a
+`content-policy: allow-next-line` comment above it and mention why in the PR.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the
