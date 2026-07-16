@@ -15,6 +15,7 @@
  * @returns {Array<[number, number]>}
  */
 export function eightWay(grid, r, c) {
+  /** @type {Array<[number, number]>} */
   const out = []
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
@@ -33,6 +34,7 @@ export function eightWay(grid, r, c) {
  * @returns {Array<[number, number]>}
  */
 export function orthogonal(grid, r, c) {
+  /** @type {Array<[number, number]>} */
   const out = []
   const deltas = [[-1, 0], [1, 0], [0, -1], [0, 1]]
   for (const [dr, dc] of deltas) {

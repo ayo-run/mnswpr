@@ -10,9 +10,15 @@
     "url": "https://github.com/ayo-run/mnswpr"
   },
   "main": "index.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "default": "./index.js"
+    },
+    "./*.js": {
+      "types": "./*.d.ts",
+      "default": "./*.js"
     },
     "./*": {
       "default": "./*"

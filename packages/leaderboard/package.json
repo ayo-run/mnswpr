@@ -19,6 +19,10 @@
     "./dist/*": {
       "default": "./dist/*"
     },
+    "./*.js": {
+      "types": "./*.d.ts",
+      "default": "./*.js"
+    },
     "./*": {
       "default": "./*"
     }
@@ -28,10 +32,8 @@
     "./dist"
   ],
   "dependencies": {
+    "@cozy-games/utils": "workspace:^",
     "web-component-base": "^5.0.0"
-  },
-  "devDependencies": {
-    "@cozy-games/utils": "workspace:*"
   },
   "peerDependencies": {
     "firebase": "^12.11.0"
