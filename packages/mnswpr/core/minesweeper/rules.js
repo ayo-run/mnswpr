@@ -15,6 +15,8 @@ import { floodReveal, countFlagsAround, allMines } from './reveal.js'
  * @typedef {{ seed: number, config: Config, grid: Grid<Cell>, phase: Phase, minesPlaced: boolean, revealedSafe: number }} State
  * @typedef {{ type: 'reveal', r: number, c: number } | { type: 'flag', r: number, c: number } | { type: 'chord', r: number, c: number }} Move
  * @typedef {object} Event
+ * @typedef {{ seed: number, config: Config, phase: Phase, minesPlaced: boolean, revealedSafe: number, grid: { rows: number, cols: number, cells: Cell[] } }} Snapshot
+ * @typedef {{ r: number, c: number, status: 'revealed', adjacent: number, mine: boolean } | { r: number, c: number, status: 'flagged' } | { r: number, c: number, status: 'hidden', mine: true }} ProjectedCell
  */
 
 /**
@@ -171,9 +173,11 @@ function chord(state, r, c) {
  * (invariant #3). Hidden, unrevealed, non-mine cells are simply omitted.
  *
  * @param {State} state
+ * @returns {{ config: Config, phase: Phase, cells: ProjectedCell[] }}
  */
 function project(state) {
   const terminal = state.phase === 'won' || state.phase === 'lost'
+  /** @type {ProjectedCell[]} */
   const cells = []
   state.grid.forEach((cell, r, c) => {
     if (cell.status === 'revealed') cells.push({ r, c, status: 'revealed', adjacent: cell.adjacent, mine: cell.mine })
@@ -291,7 +295,7 @@ export const MinesweeperRules = {
    * already plain data.
    *
    * @param {State} state
-   * @returns {{ seed: number, config: Config, phase: Phase, minesPlaced: boolean, revealedSafe: number, grid: { rows: number, cols: number, cells: Cell[] } }}
+   * @returns {Snapshot}
    */
   serialize(state) {
     return {
@@ -308,7 +312,7 @@ export const MinesweeperRules = {
    * Rebuild a game state from {@link serialize} output (or its JSON round-trip).
    * Cells are cloned so the revived state shares no references with the snapshot.
    *
-   * @param {ReturnType<typeof MinesweeperRules.serialize>} snap
+   * @param {Snapshot} snap
    * @returns {State}
    */
   deserialize(snap) {

@@ -3,6 +3,8 @@ import { describe, it, expect } from 'vitest'
 import { PlaybackClock } from '@cozy-games/replay'
 import { createMoveLog } from '@cozy-games/move-log'
 
+const VERSION = 'mnswpr-moves/1'
+
 // Real mnswpr run + reducers — imported by the TEST (relative), so no game
 // dependency enters the engine's manifest.
 import { GameSession, MinesweeperRules } from '../../mnswpr/core/index.js'
@@ -62,7 +64,7 @@ function truncatedEnvelope() {
   // ...stream cut here — no terminal event.
   const baseT = 1000
   return {
-    envelope: createMoveLog(emitted.map(e => ({ seq: e.seq, t: e.t, event: e }))),
+    envelope: createMoveLog(VERSION, emitted.map(e => ({ seq: e.seq, clientTs: e.t, type: e.type, payload: { r: e.r, c: e.c } }))),
     lastOffset: 1200 - baseT // 200
   }
 }
@@ -134,7 +136,7 @@ describe('the "ended" signal', () => {
     const emitted = []
     session.onMove(e => emitted.push(e))
     now = 1000; session.applyMove({ type: 'reveal', r: 2, c: 2 }) // floods all 8 → won
-    const complete = createMoveLog(emitted.map(e => ({ seq: e.seq, t: e.t, event: e })))
+    const complete = createMoveLog(VERSION, emitted.map(e => ({ seq: e.seq, clientTs: e.t, type: e.type, payload: { r: e.r, c: e.c } })))
 
     const s = fakeScheduler()
     const clock = new PlaybackClock(complete, s)
@@ -164,7 +166,7 @@ describe('the "ended" signal', () => {
   })
 
   it('does not fire for an empty envelope', () => {
-    const clock = new PlaybackClock(createMoveLog([]), fakeScheduler())
+    const clock = new PlaybackClock(createMoveLog(VERSION, []), fakeScheduler())
     const ends = []
     clock.onEnd(() => ends.push(1))
     clock.play()

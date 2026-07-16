@@ -26,16 +26,29 @@ export class Grid {
     }
   }
 
-  /** @returns {boolean} */
+  /**
+   * @param {number} r
+   * @param {number} c
+   * @returns {boolean}
+   */
   inBounds(r, c) {
     return r >= 0 && c >= 0 && r < this.rows && c < this.cols
   }
 
-  /** @returns {Cell} */
+  /**
+   * @param {number} r
+   * @param {number} c
+   * @returns {Cell}
+   */
   at(r, c) {
     return this._cells[r * this.cols + c]
   }
 
+  /**
+   * @param {number} r
+   * @param {number} c
+   * @param {Cell} cell
+   */
   set(r, c, cell) {
     this._cells[r * this.cols + c] = cell
   }

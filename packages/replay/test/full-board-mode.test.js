@@ -3,6 +3,8 @@ import { describe, it, expect } from 'vitest'
 import { PlaybackClock } from '@cozy-games/replay'
 import { createMoveLog } from '@cozy-games/move-log'
 
+const VERSION = 'mnswpr-moves/1'
+
 // Real mnswpr run + state reducer — imported by the TEST (relative), so no game
 // dependency enters the engine's manifest.
 import { GameSession, MinesweeperRules } from '../../mnswpr/core/index.js'
@@ -64,12 +66,12 @@ for (const step of [
   nowClock = step.at
   session.applyMove(step.move)
 }
-const records = emitted.map(e => ({ seq: e.seq, t: e.t, event: e }))
-const envelope = createMoveLog(records)
+const records = emitted.map(e => ({ seq: e.seq, clientTs: e.t, type: e.type, payload: { r: e.r, c: e.c } }))
+const envelope = createMoveLog(VERSION, records)
 const reduce = createStateReducer(board)
 
 // Independent ground truth: reduce over records at offset <= t.
-const truth = t => reduce(records.filter(r => (r.t - baseT) <= t))
+const truth = t => reduce(records.filter(r => (r.clientTs - baseT) <= t))
 
 describe('full-board mode — flag gating (inert by default)', () => {
   it('does nothing when the flag is off, even with a state reducer', () => {

@@ -1,14 +1,14 @@
 /**
- * @typedef {import('../core/minesweeper/rules.js').MoveEvent} MnswprMoveEvent
+ * @typedef {import('./replay-common.js').MnswprRecord} MnswprRecord
  * @typedef {import('../core/minesweeper/board.js').Layout} Layout
  * @typedef {{ mine: boolean, adjacent: number, status: 'hidden' | 'flagged' | 'revealed' }} BoardCell
  * @typedef {{ rows: number, cols: number, phase: string, revealedSafe: number, cells: BoardCell[][] }} BoardState
  */
 /**
  * The full-board state reducer for Minesweeper — mnswpr's implementation of the
- * replay engine's `StateReducer<MnswprMoveEvent, BoardState>` seam (replay-05).
- * Given the ordered slice of move-events played so far, it reconstructs the
- * COMPLETE board at that point: every cell's mine/adjacent/status plus the phase.
+ * replay engine's `StateReducer<BoardState>` seam (replay-05). Given the ordered
+ * slice of move-log entries played so far, it reconstructs the COMPLETE board at
+ * that point: every cell's mine/adjacent/status plus the phase.
  *
  * Like the progress reducer, it takes the board as closure input and replays the
  * moves through the pure core rules — so reveals flood, chords open their
@@ -17,12 +17,10 @@
  * any position and rebuild the board there.
  *
  * @param {Layout} layout - the recorded board (as produced by `generateBoard`)
- * @returns {(events: { event: MnswprMoveEvent }[]) => BoardState}
+ * @returns {(events: MnswprRecord[]) => BoardState}
  */
-export function createStateReducer(layout: Layout): (events: {
-    event: MnswprMoveEvent;
-}[]) => BoardState;
-export type MnswprMoveEvent = import("../core/minesweeper/rules.js").MoveEvent;
+export function createStateReducer(layout: Layout): (events: MnswprRecord[]) => BoardState;
+export type MnswprRecord = import("./replay-common.js").MnswprRecord;
 export type Layout = import("../core/minesweeper/board.js").Layout;
 export type BoardCell = {
     mine: boolean;

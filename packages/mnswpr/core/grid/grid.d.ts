@@ -15,11 +15,24 @@ export class Grid<Cell> {
     cols: number;
     /** @type {Cell[]} */
     _cells: Cell[];
-    /** @returns {boolean} */
-    inBounds(r: any, c: any): boolean;
-    /** @returns {Cell} */
-    at(r: any, c: any): Cell;
-    set(r: any, c: any, cell: any): void;
+    /**
+     * @param {number} r
+     * @param {number} c
+     * @returns {boolean}
+     */
+    inBounds(r: number, c: number): boolean;
+    /**
+     * @param {number} r
+     * @param {number} c
+     * @returns {Cell}
+     */
+    at(r: number, c: number): Cell;
+    /**
+     * @param {number} r
+     * @param {number} c
+     * @param {Cell} cell
+     */
+    set(r: number, c: number, cell: Cell): void;
     /** @param {(cell: Cell, r: number, c: number) => void} fn */
     forEach(fn: (cell: Cell, r: number, c: number) => void): void;
     /**

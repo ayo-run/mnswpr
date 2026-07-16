@@ -55,13 +55,18 @@ export class LeaderBoardService {
     /**
      * Read surface — render the ranked list with a duration tab bar.
      * @see LeaderBoardReader#render
+     * @param {String} category
+     * @param {String} title
+     * @param {String} [duration]
+     * @returns {Promise<HTMLDivElement>}
      */
-    render(category: any, title: any, duration: any): Promise<HTMLDivElement>;
+    render(category: string, title: string, duration?: string): Promise<HTMLDivElement>;
     /**
      * Write surface — submit a completed game (archive + ranked entry).
      * @see LeaderBoardWriter#submit
+     * @param {import('./leaderboard-write.js').ScoreEntry} entry
      */
-    submit(entry: any): Promise<void>;
+    submit(entry: import("./leaderboard-write.js").ScoreEntry): Promise<void>;
 }
 import { LeaderBoardReader } from './leaderboard-read.js';
 import { LeaderBoardWriter } from './leaderboard-write.js';

@@ -3,7 +3,7 @@ import { MinesweeperRules } from '../core/minesweeper/rules.js'
 import { toMove } from './replay-common.js'
 
 /**
- * @typedef {import('../core/minesweeper/rules.js').MoveEvent} MnswprMoveEvent
+ * @typedef {import('./replay-common.js').MnswprRecord} MnswprRecord
  * @typedef {import('../core/minesweeper/board.js').Layout} Layout
  */
 
@@ -15,15 +15,16 @@ import { toMove } from './replay-common.js'
  * `revealed safe cells / total safe cells * 100`.
  *
  * Why it needs the board: a single `reveal` or `chord` event floods MANY cells,
- * but the recorded move-event only carries `{ type, r, c }` — not how many cells
- * opened. So the reducer takes the board as closure input (consistent with the
- * interface design) and replays the moves through the pure core rules. That makes
- * reveals flood, chords reveal via their (non-flagged) neighbors, and
- * flags/unflags only gate chords — never advancing progress themselves — with no
- * cell double-counted. The engine stays game-blind; all interpretation is here.
+ * but the recorded entry only carries the move's `type` + `{ r, c }` payload — not
+ * how many cells opened. So the reducer takes the board as closure input
+ * (consistent with the interface design) and replays the moves through the pure
+ * core rules. That makes reveals flood, chords reveal via their (non-flagged)
+ * neighbors, and flags/unflags only gate chords — never advancing progress
+ * themselves — with no cell double-counted. The engine stays game-blind; all
+ * interpretation is here.
  *
  * @param {Layout} layout - the recorded board (as produced by `generateBoard`)
- * @returns {(events: { event: MnswprMoveEvent }[]) => number} a reducer to `[0, 100]`
+ * @returns {(events: MnswprRecord[]) => number} a reducer to `[0, 100]`
  */
 export function createProgressReducer(layout) {
   const totalSafe = layout.rows * layout.cols - layout.mines
@@ -32,7 +33,7 @@ export function createProgressReducer(layout) {
     if (totalSafe === 0) return 100
     let state = MinesweeperRules.fromLayout(layout)
     for (const record of events) {
-      const move = toMove(record.event)
+      const move = toMove(record)
       if (move) state = MinesweeperRules.apply(state, move).state
     }
     return (state.revealedSafe / totalSafe) * 100

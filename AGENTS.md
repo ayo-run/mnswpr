@@ -114,6 +114,7 @@ The **Firebase config in `leader-board.js` is intentionally public and committed
 
 - **Code style is enforced by ESLint Stylistic**, not Prettier: 2-space indent, single quotes, **no semicolons**, no trailing commas, spaces inside `{ braces }` but not `[brackets]`. Run `pnpm lint:fix` before committing. Both `**/*.js` and `**/*.css` are linted (CSS via `@eslint/css`).
 - The engine uses **plain functions and `var`/`let` closures**, not classes; `packages/utils/` and `apps/mnswpr/modules/` use ES classes. Match the surrounding style of the file you edit.
+- **Types are generated, not authored.** Source stays JS + JSDoc (`// @ts-check`); `tsc` is a build-time tool that emits `.d.ts` from that JSDoc so published `@cozy-games/*` packages ship types. Declarations are emitted **co-located** next to each source file and **committed** — `pnpm build:types` (`scripts/build-types.mjs`) deletes the previous ones and re-runs `tsc -p tsconfig.types.json`, since TypeScript won't emit over an existing `.d.ts` (TS5055). The type-check runs `strict: false` and covers only the files named in that config's `include` list — adding a new published source file means adding it there, or it ships without types. After touching JSDoc on an included file, run `pnpm build:types` and commit the regenerated declarations.
 
 ## Release & git hooks (maintainer workflow)
 

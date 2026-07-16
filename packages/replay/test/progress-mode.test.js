@@ -3,6 +3,8 @@ import { describe, it, expect } from 'vitest'
 import { PlaybackClock } from '@cozy-games/replay'
 import { createMoveLog } from '@cozy-games/move-log'
 
+const VERSION = 'mnswpr-moves/1'
+
 // A real mnswpr run + its reducer — imported by the TEST via relative paths, so
 // no game dependency enters the replay engine's manifest.
 import { GameSession, MinesweeperRules } from '../../mnswpr/core/index.js'
@@ -74,8 +76,8 @@ for (const step of script) {
   truthPoints.push({ offset: step.at - baseT, revealedSafe: session.state.revealedSafe })
 }
 
-const records = emitted.map(e => ({ seq: e.seq, t: e.t, event: e }))
-const envelope = createMoveLog(records)
+const records = emitted.map(e => ({ seq: e.seq, clientTs: e.t, type: e.type, payload: { r: e.r, c: e.c } }))
+const envelope = createMoveLog(VERSION, records)
 
 // Ground truth for the mnswpr reducer: revealedSafe / total at a given offset —
 // derived from the session, NOT from the reducer under test.
@@ -90,7 +92,7 @@ function mnswprTruth(offset) {
 const totalEvents = records.length
 const dummyReduce = events => (events.length / totalEvents) * 100
 function dummyTruth(offset) {
-  return (records.filter(r => (r.t - baseT) <= offset).length / totalEvents) * 100
+  return (records.filter(r => (r.clientTs - baseT) <= offset).length / totalEvents) * 100
 }
 
 const CASES = [
@@ -99,7 +101,7 @@ const CASES = [
 ]
 
 describe.each(CASES)('progress mode — same code path, adapter: $name', ({ adapter, truth }) => {
-  const clamp = t => Math.max(0, Math.min(t, envelope.events[envelope.events.length - 1].t - baseT))
+  const clamp = t => Math.max(0, Math.min(t, envelope.events[envelope.events.length - 1].clientTs - baseT))
 
   it('progress() matches the source run at multiple points (via seek)', () => {
     const clock = new PlaybackClock(envelope, fakeScheduler(), adapter)

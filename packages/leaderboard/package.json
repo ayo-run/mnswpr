@@ -1,6 +1,6 @@
 {
   "name": "@cozy-games/leaderboard",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Generic, game-agnostic Firestore leaderboard with time-windowed views",
   "author": "Ayo Ayco",
   "type": "module",

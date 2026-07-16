@@ -9,7 +9,7 @@ function record(layout, moves) {
   const events = []
   session.onMove(e => events.push(e))
   for (const m of moves) session.applyMove(m)
-  return { events: events.map(event => ({ seq: event.seq, t: event.t, event })), session }
+  return { events: events.map(event => ({ seq: event.seq, clientTs: event.t, type: event.type, payload: { r: event.r, c: event.c } })), session }
 }
 
 // 3x3, single mine at (0,0); adjacency computed. Total safe = 8.
@@ -33,7 +33,7 @@ describe('mnswpr progress reducer (percent-cleared)', () => {
 
     const session = new GameSession(MinesweeperRules, { state: MinesweeperRules.fromLayout(layout) })
     const events = []
-    session.onMove(e => events.push({ seq: e.seq, t: e.t, event: e }))
+    session.onMove(e => events.push({ seq: e.seq, clientTs: e.t, type: e.type, payload: { r: e.r, c: e.c } }))
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         if (!session.state.grid.at(r, c).mine) session.applyMove({ type: 'reveal', r, c })
@@ -72,7 +72,7 @@ describe('mnswpr progress reducer (percent-cleared)', () => {
       { type: 'flag', r: 0, c: 0 },   // flag the mine
       { type: 'flag', r: 0, c: 0 }    // unflag it
     ])
-    expect(events.map(e => e.event.type)).toEqual(['reveal', 'flag', 'unflag'])
+    expect(events.map(e => e.type)).toEqual(['reveal', 'flag', 'unflag'])
 
     const afterReveal = progress(events.slice(0, 1))
     expect(afterReveal).toBeCloseTo(12.5, 5) // 1 / 8
@@ -90,7 +90,7 @@ describe('mnswpr progress reducer (percent-cleared)', () => {
       { type: 'flag', r: 0, c: 0 },
       { type: 'chord', r: 0, c: 1 }
     ])
-    expect(events.map(e => e.event.type)).toEqual(['reveal', 'flag', 'chord'])
+    expect(events.map(e => e.type)).toEqual(['reveal', 'flag', 'chord'])
 
     expect(progress(events.slice(0, 1))).toBeCloseTo(12.5, 5) // 1/8 after reveal
     expect(progress(events.slice(0, 2))).toBeCloseTo(12.5, 5) // flag doesn't advance

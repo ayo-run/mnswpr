@@ -8,84 +8,152 @@ import { dirname, join } from 'node:path'
 // module resolves and is importable by other packages.
 import {
   createMoveLog, withReceivedTs,
-  serializeMoveLog, deserializeMoveLog, isMoveLog, assertMoveLog, SCHEMA_VERSION
+  serializeMoveLog, deserializeMoveLog, isMoveLog, assertMoveLog
 } from '@cozy-games/move-log'
 
 // A REAL mnswpr session/event stream — imported by the TEST, never the module.
 // Relative path (not the package name) so no game dependency enters the manifest.
 import { GameSession, MinesweeperRules } from '../../mnswpr/core/index.js'
 
-/**
- * A dummy event vocabulary defined HERE, in the test — deliberately NOT mnswpr's.
- * The move log must type-check and work against any `T` the consumer supplies.
- * @typedef {{ kind: 'tick' } | { kind: 'boom', power: number }} DummyEvent
- */
+// A dummy vocabulary version string, defined HERE, in the test — deliberately not
+// tied to the module. The move log carries whatever version string the consumer
+// supplies, verbatim, and validates only its own envelope invariants.
+const VERSION = 'dummy-game/1'
 
 describe('@cozy-games/move-log', () => {
-  /** @type {import('@cozy-games/move-log').MoveEvent<DummyEvent>[]} */
+  /** @type {import('@cozy-games/move-log').MoveEvent[]} */
   const events = [
-    { seq: 1, t: 0, event: { kind: 'tick' } },
-    { seq: 2, t: 50, event: { kind: 'boom', power: 3 } },
-    { seq: 5, t: 120, event: { kind: 'tick' } } // gaps allowed; strictly increasing
+    { seq: 1, clientTs: 0, type: 'tick', payload: {} },
+    { seq: 2, clientTs: 50, type: 'boom', payload: { power: 3 } },
+    { seq: 5, clientTs: 120, type: 'tick', payload: {} } // gaps allowed; strictly increasing
   ]
 
-  it('exposes schema_version typed as 1', () => {
-    expect(SCHEMA_VERSION).toBe(1)
+  it('carries the caller-supplied schema_version string verbatim', () => {
+    const log = createMoveLog('mnswpr-moves/1', [])
+    expect(log.schema_version).toBe('mnswpr-moves/1')
+    // survives create → serialize → deserialize unchanged
+    const restored = deserializeMoveLog(serializeMoveLog(createMoveLog('mnswpr-moves/1', events)))
+    expect(restored.schema_version).toBe('mnswpr-moves/1')
   })
 
   it('wraps an ordered, timestamped, sequenced stream for a dummy vocabulary', () => {
-    /** @type {import('@cozy-games/move-log').MoveLog<DummyEvent>} */
-    const log = createMoveLog(events)
+    /** @type {import('@cozy-games/move-log').MoveLog} */
+    const log = createMoveLog(VERSION, events)
 
-    expect(log.schema_version).toBe(1)
+    expect(log.schema_version).toBe(VERSION)
     expect(log.events).toHaveLength(3)
     expect(log.events.map(e => e.seq)).toEqual([1, 2, 5])
-    expect(log.events.map(e => e.t)).toEqual([0, 50, 120])
-    expect(log.events[1]).toEqual({ seq: 2, t: 50, event: { kind: 'boom', power: 3 } })
+    expect(log.events.map(e => e.clientTs)).toEqual([0, 50, 120])
+    expect(log.events[1]).toEqual({ seq: 2, clientTs: 50, type: 'boom', payload: { power: 3 } })
   })
 
   it('defaults to an empty run and copies entries (no aliasing of the input)', () => {
-    expect(createMoveLog()).toEqual({ schema_version: 1, events: [] })
-    const input = [{ seq: 1, t: 1, event: { kind: 'tick' } }]
-    const log = createMoveLog(input)
-    input[0].t = 999
-    expect(log.events[0].t).toBe(1) // log kept its own copy
+    expect(createMoveLog(VERSION)).toEqual({ schema_version: VERSION, events: [] })
+    const input = [{ seq: 1, clientTs: 1, type: 'tick', payload: {} }]
+    const log = createMoveLog(VERSION, input)
+    input[0].clientTs = 999
+    expect(log.events[0].clientTs).toBe(1) // log kept its own copy
+  })
+
+  it('rejects a non-string / empty schema_version', () => {
+    // @ts-expect-error — deliberately wrong type
+    expect(() => createMoveLog(1, [])).toThrow(TypeError)
+    expect(() => createMoveLog('', [])).toThrow(TypeError)
+    // @ts-expect-error — deliberately missing
+    expect(() => createMoveLog(undefined, [])).toThrow(TypeError)
   })
 
   it('rejects a non-monotonic seq at construction', () => {
-    expect(() => createMoveLog([
-      { seq: 2, t: 0, event: {} },
-      { seq: 1, t: 1, event: {} }
+    expect(() => createMoveLog(VERSION, [
+      { seq: 2, clientTs: 0, type: 'a', payload: {} },
+      { seq: 1, clientTs: 1, type: 'b', payload: {} }
     ])).toThrow(RangeError)
+  })
+})
+
+describe('generic over the game — a second, made-up vocabulary needs zero package changes', () => {
+  // A non-Minesweeper vocabulary defined ENTIRELY here: `TType = 'a' | 'b'`, a
+  // payload shape of `{ x: number }`. The package type-checks and validates it with
+  // no change — mirror of the consumer's "adding a game_type needs no generic change".
+  it('builds and validates MoveLog<"a" | "b", { x: number }>', () => {
+    /** @type {import('@cozy-games/move-log').MoveLog<'a' | 'b', { x: number }>} */
+    const log = createMoveLog('made-up-game/1', [
+      { seq: 1, clientTs: 0, type: 'a', payload: { x: 1 } },
+      { seq: 2, clientTs: 10, type: 'b', payload: { x: 2 } }
+    ])
+    expect(isMoveLog(log)).toBe(true)
+    expect(log.schema_version).toBe('made-up-game/1')
+    expect(log.events.map(e => e.type)).toEqual(['a', 'b'])
+    expect(log.events.map(e => e.payload.x)).toEqual([1, 2])
+    // round-trips losslessly like any other log
+    expect(deserializeMoveLog(serializeMoveLog(log))).toEqual(log)
+  })
+
+  it('Minesweeper instantiates its own discriminator + payload with the same package', () => {
+    /** @typedef {'reveal' | 'flag' | 'unflag' | 'chord'} MnswprType */
+    /** @type {import('@cozy-games/move-log').MoveLog<MnswprType, { r: number, c: number }>} */
+    const log = createMoveLog('mnswpr-moves/1', [
+      { seq: 1, clientTs: 0, type: 'reveal', payload: { r: 0, c: 0 } },
+      { seq: 2, clientTs: 5, type: 'flag', payload: { r: 1, c: 2 } }
+    ])
+    expect(log.events.map(e => e.type)).toEqual(['reveal', 'flag'])
+    expect(log.events[0].payload).toEqual({ r: 0, c: 0 })
+  })
+})
+
+describe('payload is opaque — any present value is accepted, never inspected', () => {
+  it('accepts object, array, primitive, and null payloads', () => {
+    const log = createMoveLog(VERSION, [
+      { seq: 1, clientTs: 0, type: 'obj', payload: { a: 1 } },
+      { seq: 2, clientTs: 1, type: 'arr', payload: [1, 2, 3] },
+      { seq: 3, clientTs: 2, type: 'str', payload: 'hello' },
+      { seq: 4, clientTs: 3, type: 'num', payload: 42 },
+      { seq: 5, clientTs: 4, type: 'nul', payload: null }
+    ])
+    expect(isMoveLog(log)).toBe(true)
+    expect(deserializeMoveLog(serializeMoveLog(log))).toEqual(log)
+  })
+
+  it('rejects a MISSING payload (the only payload invariant)', () => {
+    expect(() => createMoveLog(VERSION, [
+      // @ts-expect-error — deliberately missing payload
+      { seq: 1, clientTs: 0, type: 'x' }
+    ])).toThrow(TypeError)
+    expect(() => deserializeMoveLog(JSON.stringify({
+      schema_version: VERSION, events: [{ seq: 1, clientTs: 0, type: 'x' }]
+    }))).toThrow(TypeError)
   })
 })
 
 describe('serialization round-trip', () => {
   const events = [
-    { seq: 1, t: 0, event: { type: 'reveal', r: 0, c: 0 } },
-    { seq: 2, t: 50, event: { type: 'flag', r: 1, c: 2 } },
-    { seq: 3, t: 90, event: { type: 'chord', r: 4, c: 4 } }
+    { seq: 1, clientTs: 0, type: 'reveal', payload: { r: 0, c: 0 } },
+    { seq: 2, clientTs: 50, type: 'flag', payload: { r: 1, c: 2 } },
+    { seq: 3, clientTs: 90, type: 'chord', payload: { r: 4, c: 4 } }
   ]
 
-  it('preserves order, timestamps, and sequence numbers exactly', () => {
-    const log = createMoveLog(events)
+  it('preserves order, timestamps, types, payloads, and sequence numbers exactly', () => {
+    const log = createMoveLog(VERSION, events)
     const restored = deserializeMoveLog(serializeMoveLog(log))
 
     expect(restored).toEqual(log) // full structural fidelity
+    expect(restored.schema_version).toBe(VERSION)
     expect(restored.events.map(e => e.seq)).toEqual([1, 2, 3])
-    expect(restored.events.map(e => e.t)).toEqual([0, 50, 90])
-    expect(restored.events.map(e => e.event.type)).toEqual(['reveal', 'flag', 'chord'])
+    expect(restored.events.map(e => e.clientTs)).toEqual([0, 50, 90])
+    expect(restored.events.map(e => e.type)).toEqual(['reveal', 'flag', 'chord'])
+    expect(restored.events.map(e => e.payload)).toEqual([{ r: 0, c: 0 }, { r: 1, c: 2 }, { r: 4, c: 4 }])
   })
 
   it('serializeMoveLog produces a JSON string parseable back to the same object', () => {
-    const log = createMoveLog(events)
+    const log = createMoveLog(VERSION, events)
     const json = serializeMoveLog(log)
     expect(typeof json).toBe('string')
     expect(JSON.parse(json)).toEqual(log)
   })
 
   it('rejects each malformed fixture with a distinct, clear error', () => {
-    const valid = serializeMoveLog(createMoveLog(events))
+    const valid = serializeMoveLog(createMoveLog(VERSION, events))
+    const entry = { seq: 1, clientTs: 0, type: 'reveal', payload: {} }
 
     // not a string
     // @ts-expect-error — deliberately wrong type
@@ -93,21 +161,26 @@ describe('serialization round-trip', () => {
     // invalid JSON syntax
     expect(() => deserializeMoveLog('{not json')).toThrow(SyntaxError)
     // missing schema_version
-    expect(() => deserializeMoveLog(JSON.stringify({ events: [] }))).toThrow(RangeError)
-    // wrong schema_version
-    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: 2, events: [] }))).toThrow(RangeError)
+    expect(() => deserializeMoveLog(JSON.stringify({ events: [] }))).toThrow(TypeError)
+    // non-string schema_version
+    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: 1, events: [] }))).toThrow(TypeError)
+    // empty-string schema_version
+    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: '', events: [] }))).toThrow(TypeError)
     // events not an array
-    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: 1, events: 'nope' }))).toThrow(TypeError)
-    // missing 'event' field
-    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: 1, events: [{ seq: 1, t: 0 }] }))).toThrow(TypeError)
-    // bad timestamp type
-    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: 1, events: [{ seq: 1, t: 'soon', event: {} }] }))).toThrow(TypeError)
-    // bad seq type
-    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: 1, events: [{ seq: 1.5, t: 0, event: {} }] }))).toThrow(TypeError)
+    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: VERSION, events: 'nope' }))).toThrow(TypeError)
+    // non-integer seq
+    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: VERSION, events: [{ ...entry, seq: 1.5 }] }))).toThrow(TypeError)
+    // non-finite clientTs
+    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: VERSION, events: [{ ...entry, clientTs: 'soon' }] }))).toThrow(TypeError)
+    // empty / non-string type
+    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: VERSION, events: [{ ...entry, type: '' }] }))).toThrow(TypeError)
+    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: VERSION, events: [{ ...entry, type: 7 }] }))).toThrow(TypeError)
+    // missing payload
+    expect(() => deserializeMoveLog(JSON.stringify({ schema_version: VERSION, events: [{ seq: 1, clientTs: 0, type: 'reveal' }] }))).toThrow(TypeError)
     // shuffled / non-monotonic seq
     const shuffled = JSON.stringify({
-      schema_version: 1,
-      events: [{ seq: 3, t: 0, event: {} }, { seq: 1, t: 1, event: {} }]
+      schema_version: VERSION,
+      events: [{ seq: 3, clientTs: 0, type: 'a', payload: {} }, { seq: 1, clientTs: 1, type: 'b', payload: {} }]
     })
     expect(() => deserializeMoveLog(shuffled)).toThrow(RangeError)
 
@@ -115,7 +188,8 @@ describe('serialization round-trip', () => {
     const messages = [
       captureMessage(() => deserializeMoveLog('{not json')),
       captureMessage(() => deserializeMoveLog(JSON.stringify({ events: [] }))),
-      captureMessage(() => deserializeMoveLog(JSON.stringify({ schema_version: 1, events: [{ seq: 1, t: 0 }] }))),
+      captureMessage(() => deserializeMoveLog(JSON.stringify({ schema_version: VERSION, events: [{ ...entry, type: '' }] }))),
+      captureMessage(() => deserializeMoveLog(JSON.stringify({ schema_version: VERSION, events: [{ seq: 1, clientTs: 0, type: 'reveal' }] }))),
       captureMessage(() => deserializeMoveLog(shuffled))
     ]
     expect(new Set(messages).size).toBe(messages.length)
@@ -126,8 +200,8 @@ describe('serialization round-trip', () => {
 
   it('never returns a partially-parsed log (throws before returning)', () => {
     const partlyBad = JSON.stringify({
-      schema_version: 1,
-      events: [{ seq: 1, t: 0, event: { ok: true } }, { seq: 2, t: 'bad', event: {} }]
+      schema_version: VERSION,
+      events: [{ seq: 1, clientTs: 0, type: 'ok', payload: { ok: true } }, { seq: 2, clientTs: 'bad', type: 'x', payload: {} }]
     })
     let result = 'sentinel'
     expect(() => { result = deserializeMoveLog(partlyBad) }).toThrow(TypeError)
@@ -135,24 +209,24 @@ describe('serialization round-trip', () => {
   })
 
   it('isMoveLog / assertMoveLog agree on validity', () => {
-    const log = createMoveLog(events)
+    const log = createMoveLog(VERSION, events)
     expect(isMoveLog(log)).toBe(true)
     expect(assertMoveLog(log)).toBe(log)
     expect(isMoveLog(null)).toBe(false)
-    expect(isMoveLog({ schema_version: 1, events: [{ seq: 1, t: 0 }] })).toBe(false)
+    expect(isMoveLog({ schema_version: VERSION, events: [{ seq: 1, clientTs: 0, type: 'x' }] })).toBe(false)
   })
 })
 
 describe('received timestamps (additive receivedTs)', () => {
   const base = [
-    { seq: 1, t: 0, event: { type: 'reveal', r: 0, c: 0 } },
-    { seq: 2, t: 50, event: { type: 'flag', r: 1, c: 2 } }
+    { seq: 1, clientTs: 0, type: 'reveal', payload: { r: 0, c: 0 } },
+    { seq: 2, clientTs: 50, type: 'flag', payload: { r: 1, c: 2 } }
   ]
 
   it('accepts an optional receivedTs per event and round-trips it', () => {
-    const log = createMoveLog([
-      { seq: 1, t: 0, event: { k: 'a' }, receivedTs: 1000 },
-      { seq: 2, t: 50, event: { k: 'b' }, receivedTs: 1060 }
+    const log = createMoveLog(VERSION, [
+      { seq: 1, clientTs: 0, type: 'a', payload: {}, receivedTs: 1000 },
+      { seq: 2, clientTs: 50, type: 'b', payload: {}, receivedTs: 1060 }
     ])
     expect(log.events[0].receivedTs).toBe(1000)
     const restored = deserializeMoveLog(serializeMoveLog(log))
@@ -161,9 +235,9 @@ describe('received timestamps (additive receivedTs)', () => {
   })
 
   it('is valid with receivedTs on only some events', () => {
-    const log = createMoveLog([
-      { seq: 1, t: 0, event: { k: 'a' }, receivedTs: 1000 },
-      { seq: 2, t: 50, event: { k: 'b' } } // no receivedTs
+    const log = createMoveLog(VERSION, [
+      { seq: 1, clientTs: 0, type: 'a', payload: {}, receivedTs: 1000 },
+      { seq: 2, clientTs: 50, type: 'b', payload: {} } // no receivedTs
     ])
     expect(isMoveLog(log)).toBe(true)
     expect('receivedTs' in log.events[1]).toBe(false)
@@ -171,7 +245,7 @@ describe('received timestamps (additive receivedTs)', () => {
   })
 
   it('REGRESSION: a log with no receivedTs anywhere stays fully valid and leaks no key', () => {
-    const log = createMoveLog(base)
+    const log = createMoveLog(VERSION, base)
     expect(isMoveLog(log)).toBe(true)
     expect(log.events.every(e => !('receivedTs' in e))).toBe(true)
     const restored = deserializeMoveLog(serializeMoveLog(log))
@@ -180,29 +254,29 @@ describe('received timestamps (additive receivedTs)', () => {
   })
 
   it('rejects a non-finite / non-numeric receivedTs', () => {
-    expect(() => createMoveLog([{ seq: 1, t: 0, event: {}, receivedTs: 'soon' }])).toThrow(TypeError)
-    expect(() => createMoveLog([{ seq: 1, t: 0, event: {}, receivedTs: Infinity }])).toThrow(TypeError)
+    expect(() => createMoveLog(VERSION, [{ seq: 1, clientTs: 0, type: 'x', payload: {}, receivedTs: 'soon' }])).toThrow(TypeError)
+    expect(() => createMoveLog(VERSION, [{ seq: 1, clientTs: 0, type: 'x', payload: {}, receivedTs: Infinity }])).toThrow(TypeError)
     expect(() => deserializeMoveLog(JSON.stringify({
-      schema_version: 1,
-      events: [{ seq: 1, t: 0, event: {}, receivedTs: 'later' }]
+      schema_version: VERSION,
+      events: [{ seq: 1, clientTs: 0, type: 'x', payload: {}, receivedTs: 'later' }]
     }))).toThrow(TypeError)
   })
 
   it('withReceivedTs attaches host-received times additively without mutating the input', () => {
-    const log = createMoveLog(base)
+    const log = createMoveLog(VERSION, base)
     let clock = 900
     const stamped = withReceivedTs(log, () => (clock += 10))
 
     // input untouched
     expect(log.events.every(e => !('receivedTs' in e))).toBe(true)
-    // output stamped, still a valid v1 log, round-trips
+    // output stamped, still a valid log, round-trips
     expect(stamped.events.map(e => e.receivedTs)).toEqual([910, 920])
-    expect(stamped.schema_version).toBe(1)
+    expect(stamped.schema_version).toBe(VERSION)
     expect(deserializeMoveLog(serializeMoveLog(stamped))).toEqual(stamped)
   })
 
   it('withReceivedTs leaves events unstamped when the stamp returns undefined', () => {
-    const log = createMoveLog(base)
+    const log = createMoveLog(VERSION, base)
     const stamped = withReceivedTs(log, (e) => (e.seq === 1 ? 1234 : undefined))
     expect(stamped.events[0].receivedTs).toBe(1234)
     expect('receivedTs' in stamped.events[1]).toBe(false)
@@ -210,19 +284,8 @@ describe('received timestamps (additive receivedTs)', () => {
   })
 
   it('withReceivedTs rejects a stamp that returns a non-finite number', () => {
-    const log = createMoveLog(base)
+    const log = createMoveLog(VERSION, base)
     expect(() => withReceivedTs(log, () => NaN)).toThrow(TypeError)
-  })
-
-  it('VERSIONING: receivedTs is additive — same schema_version with or without it', () => {
-    const without = createMoveLog(base)
-    const withRt = withReceivedTs(without, () => 1000)
-    expect(without.schema_version).toBe(SCHEMA_VERSION)
-    expect(withRt.schema_version).toBe(SCHEMA_VERSION)
-    expect(SCHEMA_VERSION).toBe(1)
-    // a v1 reader accepts both shapes
-    expect(isMoveLog(without)).toBe(true)
-    expect(isMoveLog(withRt)).toBe(true)
   })
 })
 
@@ -258,14 +321,19 @@ describe('integration: wraps a real mnswpr event stream (core-06)', () => {
 
     expect(emitted.map(e => e.type)).toEqual(['reveal', 'flag', 'unflag', 'flag', 'chord'])
 
-    // Wrap the stream: lift the recording metadata (seq, t) to the log level.
-    const log = createMoveLog(emitted.map(e => ({ seq: e.seq, t: e.t, event: e })))
+    // Wrap the stream: the log-owned metadata (seq, clientTs) is lifted to the log
+    // level; the surfaced `type` discriminator + opaque game `payload` (the move
+    // coords) stay put — exactly the ADR §1 split.
+    const log = createMoveLog('mnswpr-moves/1', emitted.map(e => ({
+      seq: e.seq, clientTs: e.t, type: e.type, payload: { r: e.r, c: e.c }
+    })))
     const restored = deserializeMoveLog(serializeMoveLog(log))
 
     expect(restored).toEqual(log)
+    expect(restored.schema_version).toBe('mnswpr-moves/1')
     expect(restored.events.map(e => e.seq)).toEqual([1, 2, 3, 4, 5])
-    expect(restored.events.map(e => e.t)).toEqual([1050, 1100, 1150, 1200, 1250])
-    expect(restored.events.map(e => e.event.type)).toEqual(['reveal', 'flag', 'unflag', 'flag', 'chord'])
+    expect(restored.events.map(e => e.clientTs)).toEqual([1050, 1100, 1150, 1200, 1250])
+    expect(restored.events.map(e => e.type)).toEqual(['reveal', 'flag', 'unflag', 'flag', 'chord'])
     // sequence is strictly increasing — the log's own invariant, verified on real data
     const seqs = restored.events.map(e => e.seq)
     expect(seqs).toEqual([...seqs].sort((a, b) => a - b))

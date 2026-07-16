@@ -8,7 +8,7 @@ function record(layout, moves) {
   const events = []
   session.onMove(e => events.push(e))
   for (const m of moves) session.applyMove(m)
-  return { events: events.map(event => ({ seq: event.seq, t: event.t, event })), session }
+  return { events: events.map(event => ({ seq: event.seq, clientTs: event.t, type: event.type, payload: { r: event.r, c: event.c } })), session }
 }
 
 // 3x3, single mine at (0,0). Total safe = 8.

@@ -42,16 +42,18 @@ function fakeScheduler(start = 0) {
   }
 }
 
-// Events at offsets 0, 100, 350 (t rebased from 1000). Payload is opaque to the clock.
+const VERSION = 'dummy-game/1'
+
+// Events at offsets 0, 100, 350 (clientTs rebased from 1000). Payload is opaque to the clock.
 function envelope() {
-  return createMoveLog([
-    { seq: 1, t: 1000, event: { type: 'reveal', r: 0, c: 0 } },
-    { seq: 2, t: 1100, event: { type: 'flag', r: 1, c: 2 } },
-    { seq: 3, t: 1350, event: { type: 'chord', r: 4, c: 4 } }
+  return createMoveLog(VERSION, [
+    { seq: 1, clientTs: 1000, type: 'reveal', payload: { r: 0, c: 0 } },
+    { seq: 2, clientTs: 1100, type: 'flag', payload: { r: 1, c: 2 } },
+    { seq: 3, clientTs: 1350, type: 'chord', payload: { r: 4, c: 4 } }
   ])
 }
 
-const typesOf = records => records.map(r => r.event.type)
+const typesOf = records => records.map(r => r.type)
 
 describe('PlaybackClock — construction & shape', () => {
   it('rebases to offsets: duration is the last offset, first event at 0', () => {
@@ -67,7 +69,7 @@ describe('PlaybackClock — construction & shape', () => {
   })
 
   it('handles an empty envelope gracefully', () => {
-    const clock = new PlaybackClock(createMoveLog([]), fakeScheduler())
+    const clock = new PlaybackClock(createMoveLog(VERSION, []), fakeScheduler())
     const seen = []
     clock.on(r => seen.push(r))
     expect(clock.duration).toBe(0)
@@ -82,7 +84,7 @@ describe('PlaybackClock — play / pause with an injected scheduler', () => {
     const s = fakeScheduler()
     const clock = new PlaybackClock(envelope(), s)
     const seen = []
-    clock.on(r => seen.push({ type: r.event.type, at: s.clock() }))
+    clock.on(r => seen.push({ type: r.type, at: s.clock() }))
 
     clock.play()
     // offset-0 event fires synchronously on play
@@ -101,7 +103,7 @@ describe('PlaybackClock — play / pause with an injected scheduler', () => {
     const s = fakeScheduler()
     const clock = new PlaybackClock(envelope(), s)
     const seen = []
-    clock.on(r => seen.push(r.event.type))
+    clock.on(r => seen.push(r.type))
 
     clock.play()
     s.advance(150) // past offset 100, between 100 and 350
@@ -118,7 +120,7 @@ describe('PlaybackClock — play / pause with an injected scheduler', () => {
     const s = fakeScheduler()
     const clock = new PlaybackClock(envelope(), s)
     const seen = []
-    clock.on(r => seen.push({ type: r.event.type, at: s.clock() }))
+    clock.on(r => seen.push({ type: r.type, at: s.clock() }))
 
     clock.play()
     s.advance(150)
@@ -171,7 +173,7 @@ describe('PlaybackClock — seek determinism', () => {
     const s = fakeScheduler()
     const clock = new PlaybackClock(envelope(), s)
     const seen = []
-    clock.on(r => seen.push(r.event.type))
+    clock.on(r => seen.push(r.type))
 
     clock.play()
     s.advance(50) // only offset-0 delivered so far
@@ -205,7 +207,7 @@ describe('PlaybackClock — with vi fake timers', () => {
     // Default deps ⇒ Date.now + global setTimeout, both faked by vi.
     const clock = new PlaybackClock(envelope())
     const seen = []
-    clock.on(r => seen.push(r.event.type))
+    clock.on(r => seen.push(r.type))
 
     clock.play()
     expect(seen).toEqual(['reveal']) // offset 0 immediate
@@ -224,7 +226,7 @@ describe('PlaybackClock — progress reducer (adapter seam)', () => {
   /**
    * A dummy adapter defined HERE, in the test — the engine interprets nothing.
    * @typedef {{ type: string }} DummyEvent
-   * @type {import('@cozy-games/replay').ProgressReducer<DummyEvent>}
+   * @type {import('@cozy-games/replay').ProgressReducer}
    */
   const byCount = events => (events.length / 3) * 100 // 3 = total in envelope()
 
@@ -282,16 +284,16 @@ describe('game-agnosticism guard (envelope only, no game imports)', () => {
   const pkgDir = join(dirname(fileURLToPath(import.meta.url)), '..')
   const GAME_REFERENCES = /mnswpr|minesweeper/i
 
-  it('engine never interprets an event payload (no `.event` access in engine source)', () => {
+  it('engine never interprets a move payload (no `.payload` access in engine source)', () => {
     const offenders = []
     walk(pkgDir, file => {
       if (!file.endsWith('.js') || file.includes('/test/')) return
       const code = readFileSync(file, 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/\/\/.*$/gm, '')
-      if (/\.event\b/.test(code)) offenders.push(file)
+      if (/\.payload\b/.test(code)) offenders.push(file)
     })
-    expect(offenders).toEqual([]) // engine references only envelope metadata (seq/t) + opaque records
+    expect(offenders).toEqual([]) // engine references only envelope metadata (seq/clientTs) + opaque records
   })
 
   it('manifest depends only on the envelope, never a game package', () => {

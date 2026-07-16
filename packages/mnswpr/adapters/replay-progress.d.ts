@@ -1,5 +1,5 @@
 /**
- * @typedef {import('../core/minesweeper/rules.js').MoveEvent} MnswprMoveEvent
+ * @typedef {import('./replay-common.js').MnswprRecord} MnswprRecord
  * @typedef {import('../core/minesweeper/board.js').Layout} Layout
  */
 /**
@@ -10,18 +10,17 @@
  * `revealed safe cells / total safe cells * 100`.
  *
  * Why it needs the board: a single `reveal` or `chord` event floods MANY cells,
- * but the recorded move-event only carries `{ type, r, c }` — not how many cells
- * opened. So the reducer takes the board as closure input (consistent with the
- * interface design) and replays the moves through the pure core rules. That makes
- * reveals flood, chords reveal via their (non-flagged) neighbors, and
- * flags/unflags only gate chords — never advancing progress themselves — with no
- * cell double-counted. The engine stays game-blind; all interpretation is here.
+ * but the recorded entry only carries the move's `type` + `{ r, c }` payload — not
+ * how many cells opened. So the reducer takes the board as closure input
+ * (consistent with the interface design) and replays the moves through the pure
+ * core rules. That makes reveals flood, chords reveal via their (non-flagged)
+ * neighbors, and flags/unflags only gate chords — never advancing progress
+ * themselves — with no cell double-counted. The engine stays game-blind; all
+ * interpretation is here.
  *
  * @param {Layout} layout - the recorded board (as produced by `generateBoard`)
- * @returns {(events: { event: MnswprMoveEvent }[]) => number} a reducer to `[0, 100]`
+ * @returns {(events: MnswprRecord[]) => number} a reducer to `[0, 100]`
  */
-export function createProgressReducer(layout: Layout): (events: {
-    event: MnswprMoveEvent;
-}[]) => number;
-export type MnswprMoveEvent = import("../core/minesweeper/rules.js").MoveEvent;
+export function createProgressReducer(layout: Layout): (events: MnswprRecord[]) => number;
+export type MnswprRecord = import("./replay-common.js").MnswprRecord;
 export type Layout = import("../core/minesweeper/board.js").Layout;

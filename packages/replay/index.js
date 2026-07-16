@@ -1,14 +1,14 @@
 // @ts-check
-import { assertMoveLog, SCHEMA_VERSION } from '@cozy-games/move-log'
+import { assertMoveLog } from '@cozy-games/move-log'
 
 /**
  * `@cozy-games/replay` — the core of a game-agnostic replay engine.
  *
  * {@link PlaybackClock} re-drives a move-log envelope over time: it schedules
- * each recorded event to fire at its OFFSET (its `t` relative to the first
+ * each recorded event to fire at its OFFSET (its `clientTs` relative to the first
  * event) as playback time advances, and supports play / pause / seek. It
  * consumes ONLY the generic envelope (`@cozy-games/move-log`) and never inspects
- * the inside of an `event` — no game types cross this boundary.
+ * the inside of a `payload` — no game types cross this boundary.
  *
  * The clock and scheduler are injected (mirroring the core session's
  * injected-clock seam), so tests drive it with fake timers or a hand-rolled
@@ -16,8 +16,8 @@ import { assertMoveLog, SCHEMA_VERSION } from '@cozy-games/move-log'
  */
 
 /**
- * @typedef {import('@cozy-games/move-log').MoveEvent<any>} Event
- * @typedef {import('@cozy-games/move-log').MoveLog<any>} Envelope
+ * @typedef {import('@cozy-games/move-log').MoveEvent} Event
+ * @typedef {import('@cozy-games/move-log').MoveLog} Envelope
  * @typedef {{
  *   clock?: () => number,
  *   setTimeout?: (fn: () => void, ms: number) => any,
@@ -28,22 +28,20 @@ import { assertMoveLog, SCHEMA_VERSION } from '@cozy-games/move-log'
 /**
  * A reducer supplied by a game adapter: given the ordered slice of events played
  * so far (offset <= the current position), return a completion percentage in
- * `[0, 100]`. Typed generically over the game's event vocabulary `T`. The engine
- * clamps the result and never inspects an event's payload — all interpretation
- * lives in this reducer.
+ * `[0, 100]`. The engine clamps the result and never inspects an event's payload —
+ * all interpretation lives in this reducer.
  *
- * @template T
- * @typedef {(events: import('@cozy-games/move-log').MoveEvent<T>[]) => number} ProgressReducer
+ * @typedef {(events: Event[]) => number} ProgressReducer
  */
 
 /**
  * A reducer supplied by a game adapter for full-board replay: given the ordered
  * slice of events played so far, reconstruct the complete game state `S` at that
- * point. Typed generically over the event vocabulary `T` and the (opaque) state
- * `S`. Powers the flag-gated full-board mode; the engine treats `S` as a black box.
+ * point. Typed generically over the (opaque) state `S`. Powers the flag-gated
+ * full-board mode; the engine treats `S` as a black box.
  *
- * @template T, S
- * @typedef {(events: import('@cozy-games/move-log').MoveEvent<T>[]) => S} StateReducer
+ * @template S
+ * @typedef {(events: Event[]) => S} StateReducer
  */
 
 /**
@@ -51,41 +49,40 @@ import { assertMoveLog, SCHEMA_VERSION } from '@cozy-games/move-log'
  * enters the engine. Both methods are optional; the engine calls whichever the
  * mode needs and never interprets an event itself. See `docs/adapter-interface.md`.
  *
- * @template T
- * @typedef {{ progress?: ProgressReducer<T>, state?: StateReducer<T, any> }} ReplayAdapter
+ * @typedef {{ progress?: ProgressReducer, state?: StateReducer<any> }} ReplayAdapter
  */
 
 /**
- * A version reader: normalize a raw envelope of its generation into the canonical
- * ordered `MoveEvent` records the engine plays. One engine build can therefore
- * replay envelopes from multiple format generations.
+ * A version reader: normalize a raw envelope of a FOREIGN/legacy generation into
+ * the canonical ordered move-log records the engine plays. One engine build can
+ * therefore replay envelopes from multiple format generations. A canonical
+ * `@cozy-games/move-log` envelope needs no reader — it plays directly.
  *
  * @typedef {(envelope: any) => Event[]} EnvelopeReader
  */
 
-/** v1 is the canonical format itself — its `events` are already the records. */
-function readV1(envelope) {
-  return envelope.events
-}
-
 /**
- * The built-in dispatch table: `schema_version → reader`. Adding a real future
- * generation is exactly one entry here (plus its normalizer). Callers can also
- * supply extra/override readers per instance via the `readers` option.
+ * Built-in readers, keyed by `schema_version` string. Empty by default: a
+ * canonical move-log envelope IS the record set. This exists only as the base a
+ * caller's per-instance `readers` merge onto, to normalize foreign generations.
  *
- * @type {Record<number, EnvelopeReader>}
+ * @type {Record<string, EnvelopeReader>}
  */
-const ENVELOPE_READERS = { [SCHEMA_VERSION]: readV1 }
+const ENVELOPE_READERS = {}
 
 /**
- * Dispatch on an envelope's `schema_version` to the matching reader and return
- * the canonical `MoveEvent` records. Unknown/unsupported versions fail LOUDLY
- * with a specific error — never a silent best-effort parse. Whatever a reader
- * returns is validated as a canonical move log, so a half-normalized generation
- * can't reach the engine.
+ * Resolve an envelope to the canonical ordered move-log records the engine plays.
+ *
+ * A canonical `@cozy-games/move-log` envelope plays directly: it is validated in
+ * full (via {@link assertMoveLog}) and its `events` are the records. A caller may
+ * also register per-version `readers` to normalize a FOREIGN generation back to
+ * canonical records, keyed by that generation's `schema_version` string — when
+ * one matches it wins, and whatever it returns is validated so a half-normalized
+ * log can't reach the engine. Either way, malformed input fails LOUDLY with a
+ * field-specific error — never a silent best-effort parse.
  *
  * @param {any} envelope
- * @param {Record<number, EnvelopeReader>} [extraReaders] - added/overriding readers
+ * @param {Record<string, EnvelopeReader>} [extraReaders] - added/overriding readers, keyed by schema_version
  * @returns {Event[]}
  */
 export function readEnvelope(envelope, extraReaders) {
@@ -93,25 +90,25 @@ export function readEnvelope(envelope, extraReaders) {
     throw new TypeError(`readEnvelope: expected an envelope object (got ${envelope === null ? 'null' : typeof envelope})`)
   }
   const readers = extraReaders ? { ...ENVELOPE_READERS, ...extraReaders } : ENVELOPE_READERS
-  const version = envelope.schema_version
-  const read = readers[version]
-  if (typeof read !== 'function') {
-    const supported = Object.keys(readers).map(Number).sort((a, b) => a - b).join(', ')
-    throw new RangeError(`readEnvelope: unsupported envelope schema_version ${JSON.stringify(version)} (supported: ${supported})`)
+  const version = /** @type {any} */ (envelope).schema_version
+  const read = typeof version === 'string' ? readers[version] : undefined
+  if (read) {
+    const records = read(envelope)
+    // A foreign reader MUST normalize to canonical records; validate them under
+    // the source version so a half-normalized generation can't reach the engine.
+    assertMoveLog({ schema_version: version, events: records })
+    return records
   }
-  const records = read(envelope)
-  // Every reader MUST normalize to canonical move-log records; enforce it here so
-  // no downstream generation can feed the engine a malformed or half-normalized log.
-  assertMoveLog({ schema_version: SCHEMA_VERSION, events: records })
-  return records
+  // Default: the envelope itself must be a well-formed canonical move log.
+  return assertMoveLog(envelope).events
 }
 
 export class PlaybackClock {
   /**
    * @param {Envelope} envelope - a valid move-log envelope (validated here)
    * @param {Deps} [deps] - injected time source + scheduler (default: real host)
-   * @param {ReplayAdapter<any>} [adapter] - game adapter (progress / state reducers)
-   * @param {{ fullBoard?: boolean, readers?: Record<number, EnvelopeReader> }} [options] -
+   * @param {ReplayAdapter} [adapter] - game adapter (progress / state reducers)
+   * @param {{ fullBoard?: boolean, readers?: Record<string, EnvelopeReader> }} [options] -
    *   `fullBoard` flag-gates full-board mode (default OFF: `state()`/`onState` are
    *   inert and the state reducer is never called) — the minimal, documented
    *   feature-flag seam for this engine. `readers` adds/overrides schema-version
@@ -140,10 +137,10 @@ export class PlaybackClock {
 
     // Sort by recorded time (tie-break by seq) and rebase to offsets so the first
     // event sits at offset 0 — "recorded offset relative to playback time".
-    const sorted = [...records].sort((a, b) => a.t - b.t || a.seq - b.seq)
-    const baseT = sorted.length ? sorted[0].t : 0
+    const sorted = [...records].sort((a, b) => a.clientTs - b.clientTs || a.seq - b.seq)
+    const baseT = sorted.length ? sorted[0].clientTs : 0
     /** @type {{ offset: number, record: Event }[]} */
-    this._events = sorted.map(record => ({ offset: record.t - baseT, record }))
+    this._events = sorted.map(record => ({ offset: record.clientTs - baseT, record }))
     this._duration = this._events.length ? this._events[this._events.length - 1].offset : 0
 
     // Playback state. Invariant: `_cursor` === number of events whose offset is
@@ -222,7 +219,8 @@ export class PlaybackClock {
 
   /**
    * Subscribe to delivered events. The handler receives the raw envelope record
-   * (`{ seq, t, event, ... }`) — the payload stays opaque. Returns an unsubscribe.
+   * (`{ seq, clientTs, type, payload, ... }`) — the payload stays opaque. Returns
+   * an unsubscribe.
    *
    * @param {(event: Event) => void} handler
    * @returns {() => void}

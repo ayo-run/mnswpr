@@ -24,9 +24,11 @@ export function floodReveal(grid, startR, startC) {
   start.status = 'revealed'
   revealed.push({ r: startR, c: startC, adjacent: start.adjacent })
 
+  /** @type {[number, number][]} */
   const queue = [[startR, startC]]
   while (queue.length) {
-    const [r, c] = queue.shift()
+    // Safe: the `while (queue.length)` guard guarantees a value here.
+    const [r, c] = /** @type {[number, number]} */ (queue.shift())
     // Only blank cells propagate; numbers are a boundary.
     if (grid.at(r, c).adjacent !== 0) continue
     for (const [nr, nc] of eightWay(grid, r, c)) {

@@ -1,4 +1,18 @@
 /**
+ * A completed-game entry offered to the leaderboard. `score` is the ranked value
+ * (sorted per the configured order); `category` selects the board; `time_stamp`
+ * is denormalized into day/week/month buckets on write.
+ *
+ * @typedef {Object} ScoreEntry
+ * @property {number} score
+ * @property {string} category
+ * @property {string} playerId
+ * @property {Date | number | string} time_stamp
+ * @property {string} [name] - display name; defaults to 'Anonymous'
+ * @property {string} [status] - outcome the default qualifier checks against `config.passingStatus`
+ * @property {Object} [meta] - optional extra fields carried through to storage
+ */
+/**
  * The WRITE surface of the leaderboard: submitting a completed game — the
  * personal archive plus, if it qualifies, a ranked entry with denormalized
  * day/week/month bucket keys. Importable WITHOUT any read/render code — no DOM,
@@ -33,7 +47,30 @@ export class LeaderBoardWriter {
      * qualifies, also writes a ranked entry with denormalized bucket keys. Both
      * writes go through the adapter, so the storage backend is pluggable. The
      * caller owns display-name/nickname UX.
-     * @param {Object} entry - { name, playerId, score, category, time_stamp, status?, meta? }
+     * @param {ScoreEntry} entry
      */
-    submit(entry: any): Promise<void>;
+    submit(entry: ScoreEntry): Promise<void>;
 }
+/**
+ * A completed-game entry offered to the leaderboard. `score` is the ranked value
+ * (sorted per the configured order); `category` selects the board; `time_stamp`
+ * is denormalized into day/week/month buckets on write.
+ */
+export type ScoreEntry = {
+    score: number;
+    category: string;
+    playerId: string;
+    time_stamp: Date | number | string;
+    /**
+     * - display name; defaults to 'Anonymous'
+     */
+    name?: string;
+    /**
+     * - outcome the default qualifier checks against `config.passingStatus`
+     */
+    status?: string;
+    /**
+     * - optional extra fields carried through to storage
+     */
+    meta?: any;
+};
