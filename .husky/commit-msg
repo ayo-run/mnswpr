@@ -1,0 +1,2 @@
+echo "content-check (commit message)..."
+node scripts/check-content.mjs --message "$1"
