@@ -14,7 +14,8 @@
     "test": "vitest run",
     "dev": "pnpm -F mnswpr dev",
     "test:watch": "vitest",
-    "build": "pnpm -r --filter \"./packages/*\" run build",
+    "build": "pnpm build:types && pnpm -r --filter \"./packages/*\" run build",
+    "build:types": "node scripts/build-types.mjs",
     "build:lib": "vite build packages/mnswpr",
     "publish:lib": "node scripts/publish-lib.js",
     "release": "pnpm build:lib && pnpm -F @cozy-games/mnswpr run release && pnpm publish:lib",
@@ -36,6 +37,7 @@
     "jsdom": "^29.1.1",
     "secretlint": "^13.0.2",
     "simple-git": "^3.33.0",
+    "typescript": "^5.9.3",
     "vite": "^8.0.3",
     "vitest": "^4.1.9"
   },

@@ -221,6 +221,42 @@ no deploy (wire the emulator into your own store if you inject one):
 new FirebaseAdapter({ firebaseConfig, namespace: 'mw', emulator: { host: '127.0.0.1', port: 8080 } })
 ```
 
+#### Client SDK vs Admin SDK (server-side writes)
+
+`FirebaseAdapter` is built on the **client** SDK (`firebase/firestore/lite`) —
+the right choice for browser reads and for deployments where clients write
+directly. When writes must run in a **privileged server context** — a Cloud
+Function writing the ranked board that security rules deny to browsers — use the
+Admin SDK instead. The two Firestore SDKs are call-incompatible (the client SDK
+is free functions, `doc(store, …)`/`getDoc(ref)`; the Admin SDK is instance
+methods, `store.doc(path).get()`), so the package ships a **second adapter**
+rather than trying to make one `store` serve both:
+
+```js
+import { getFirestore } from 'firebase-admin/firestore'
+import { FirebaseAdminAdapter } from '@cozy-games/leaderboard/adapters/firebase-admin.js'
+import { LeaderBoardWriter } from '@cozy-games/leaderboard/leaderboard-write.js'
+
+// inside a Cloud Function / trusted server context:
+const adapter = new FirebaseAdminAdapter({ store: getFirestore(adminApp), namespace: 'mw' })
+await new LeaderBoardWriter({ adapter }).submit(entry)
+```
+
+Both adapters use the **same collections** (`{ns}-scores/{category}/games`,
+`{ns}-all/{playerId}/games`, `{ns}-config/configuration`) and implement the same
+`getConfig`/`listScores`/`addScore`/`archive` contract, so a client instance can
+read exactly what an Admin instance wrote. `FirebaseAdminAdapter` **always**
+takes an injected `store` (it never initializes an app and takes no
+`firebase-admin` dependency of its own).
+
+**Injection contract — the exact Firestore methods each adapter calls** on the
+injected `store`, so you can confirm an instance satisfies it:
+
+| Adapter | SDK | Methods called on `store` |
+| --- | --- | --- |
+| `FirebaseAdapter` | `firebase/firestore/lite` (client) | free functions `doc`, `getDoc`, `collection`, `query`, `where`, `orderBy`, `limit`, `getDocs`, `setDoc` — each passed the `store`/refs |
+| `FirebaseAdminAdapter` | `firebase-admin/firestore` (Admin) | `store.doc(path)` → `.get()` / `.set(data, { merge })`; `store.collection(path)` → `.doc()` (auto-id), `.where()/.orderBy()/.limit()` (chainable) → `.get()` |
+
 ### Supabase (Postgres)
 
 ```js

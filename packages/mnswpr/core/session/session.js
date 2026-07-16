@@ -135,7 +135,7 @@ export class GameSession {
    * Requires the rules to implement `deserialize`.
    *
    * @param {Rules} rules
-   * @param {{ state: object, log: Array<{ move: object, t: number }>, t0: number | null, tEnd: number | null }} snapshot
+   * @param {{ state: object, log: Array<{ move: object, t: number }>, t0: number | null, tEnd: number | null, seq?: number }} snapshot
    * @param {{ clock?: () => number }} [opts]
    * @returns {GameSession}
    */
