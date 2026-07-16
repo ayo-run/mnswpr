@@ -191,7 +191,7 @@ export function generateBoard(rows, cols, mines, { rng, seed = 0, exclude = NO_E
   }
 
   const config = { rows, cols, mines }
-  const grid = new Grid(rows, cols, () => ({ mine: false, adjacent: 0, status: 'hidden' }))
+  const grid = new Grid(rows, cols, () => /** @type {Cell} */ ({ mine: false, adjacent: 0, status: 'hidden' }))
   fillMines(rng ?? mulberry32(seed), config, excludeSet, grid)
 
   /** @type {LayoutCell[][]} */

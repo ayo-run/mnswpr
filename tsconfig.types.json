@@ -1,0 +1,43 @@
+{
+  "//": "Declaration-only build: emit .d.ts from the packages' existing JSDoc so published @cozy-games/* packages ship types. The repo stays JS-authored (JSDoc + @ts-check); tsc is a build-time tool for declarations only. Regenerate with `pnpm build:types`.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmitOnError": false,
+    "skipLibCheck": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "strict": false,
+    "types": []
+  },
+  "include": [
+    "packages/utils/index.js",
+    "packages/utils/logger/logger.js",
+    "packages/utils/storage/storage.js",
+    "packages/utils/timer/timer.js",
+    "packages/utils/loading/loading.js",
+    "packages/utils/date-bucket/date-bucket.js",
+    "packages/move-log/index.js",
+    "packages/mnswpr/core/**/*.js",
+    "packages/mnswpr/adapters/**/*.js",
+    "packages/mnswpr/levels.js",
+    "packages/leaderboard/leader-board.js",
+    "packages/leaderboard/leaderboard-read.js",
+    "packages/leaderboard/leaderboard-write.js",
+    "packages/leaderboard/leaderboard-element.js",
+    "packages/leaderboard/adapters/firebase.js",
+    "packages/leaderboard/adapters/firebase-admin.js",
+    "packages/leaderboard/adapters/supabase.js"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "**/test",
+    "**/*.test.js",
+    "**/*.config.js"
+  ]
+}

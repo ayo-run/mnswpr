@@ -22,10 +22,15 @@
       "default": "./dist/mnswpr.js"
     },
     "./core": {
+      "types": "./core/index.d.ts",
       "default": "./core/index.js"
     },
     "./dist/*": {
       "default": "./dist/*"
+    },
+    "./*.js": {
+      "types": "./*.d.ts",
+      "default": "./*.js"
     },
     "./*": {
       "default": "./*"

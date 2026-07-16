@@ -33,7 +33,7 @@ import { floodReveal, countFlagsAround, allMines } from './reveal.js'
 /** The move-event vocabulary as runtime data (the `MoveEvent` `type` domain). */
 export const MOVE_EVENT_TYPES = /** @type {const} */ (['reveal', 'flag', 'unflag', 'chord'])
 
-const freshCell = () => ({ mine: false, adjacent: 0, status: 'hidden' })
+const freshCell = () => /** @type {Cell} */ ({ mine: false, adjacent: 0, status: 'hidden' })
 
 /** Valid game phases and per-cell statuses — the closed sets a snapshot may name. */
 const PHASES = new Set(['fresh', 'active', 'won', 'lost'])
