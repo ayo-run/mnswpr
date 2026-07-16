@@ -42,4 +42,4 @@ package's README for library usage.
 
 ## License
 
-BSD-2-Clause © Ayo Ayco
+MIT © Ayo Ayco

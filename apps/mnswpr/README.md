@@ -145,7 +145,7 @@ Can I make a page with complex interactions (more on this later) without any lib
 
 ## License
 
-[BSD-2-Clause](./LICENSE)
+[MIT](../../LICENSE)
 
 ---
 

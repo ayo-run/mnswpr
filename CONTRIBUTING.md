@@ -119,4 +119,4 @@ For anything large, open an issue to discuss the approach first.
 ## License
 
 By contributing, you agree that your contributions are licensed under the
-project's [BSD-2-Clause license](LICENSE).
+project's [MIT license](LICENSE).
