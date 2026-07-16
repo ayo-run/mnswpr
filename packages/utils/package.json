@@ -1,6 +1,6 @@
 {
   "name": "@cozy-games/utils",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Shared, dependency-free browser utilities for Cozy Games (storage, timer, logger, loading, date buckets)",
   "author": "Ayo Ayco",
   "type": "module",
