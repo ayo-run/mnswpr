@@ -8,6 +8,7 @@
  * Future home: @cozy-games/game-session.
  *
  * @typedef {{ init: Function, apply: Function, status: Function, project: Function, serialize?: Function, deserialize?: Function, toMoveEvent?: Function }} Rules
+ * @typedef {import('../minesweeper/rules.js').MoveEvent} MoveEvent
  */
 export class GameSession {
   /**
@@ -30,7 +31,7 @@ export class GameSession {
     // Move-event emission: subscribers + a monotonic sequence counter (last seq
     // assigned; 0 = none yet). Seq is part of the snapshot so it keeps rising
     // across a resume rather than restarting.
-    /** @type {Set<(event: object) => void>} */
+    /** @type {Set<(event: MoveEvent) => void>} */
     this._moveHandlers = new Set()
     this._seq = 0
   }
@@ -41,7 +42,7 @@ export class GameSession {
    * unsubscribe function. Pure in-process pub/sub: no DOM, no rendering. Requires
    * the rules to implement `toMoveEvent`.
    *
-   * @param {(event: object) => void} handler
+   * @param {(event: MoveEvent) => void} handler
    * @returns {() => void} unsubscribe
    */
   onMove(handler) {
@@ -75,7 +76,7 @@ export class GameSession {
     return { events, view: this.rules.project(state), time: this.elapsed() }
   }
 
-  /** @param {object} event */
+  /** @param {MoveEvent} event */
   _emitMove(event) {
     for (const handler of this._moveHandlers) handler(event)
   }

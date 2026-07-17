@@ -6,6 +6,7 @@
  * Future home: @cozy-games/game-session.
  *
  * @typedef {{ init: Function, apply: Function, status: Function, project: Function, serialize?: Function, deserialize?: Function, toMoveEvent?: Function }} Rules
+ * @typedef {import('../minesweeper/rules.js').MoveEvent} MoveEvent
  */
 export class GameSession {
     /**
@@ -56,8 +57,8 @@ export class GameSession {
     }>;
     _t0: number;
     _tEnd: number;
-    /** @type {Set<(event: object) => void>} */
-    _moveHandlers: Set<(event: object) => void>;
+    /** @type {Set<(event: MoveEvent) => void>} */
+    _moveHandlers: Set<(event: MoveEvent) => void>;
     _seq: number;
     /**
      * Subscribe to typed move-events — one per effective move (reveal / flag /
@@ -65,10 +66,10 @@ export class GameSession {
      * unsubscribe function. Pure in-process pub/sub: no DOM, no rendering. Requires
      * the rules to implement `toMoveEvent`.
      *
-     * @param {(event: object) => void} handler
+     * @param {(event: MoveEvent) => void} handler
      * @returns {() => void} unsubscribe
      */
-    onMove(handler: (event: object) => void): () => void;
+    onMove(handler: (event: MoveEvent) => void): () => void;
     /**
      * Apply a move: stamp it, fold it through the rules, and return the projected
      * view + events + authoritative elapsed time.
@@ -79,8 +80,8 @@ export class GameSession {
         view: any;
         time: number;
     };
-    /** @param {object} event */
-    _emitMove(event: object): void;
+    /** @param {MoveEvent} event */
+    _emitMove(event: MoveEvent): void;
     status(): any;
     view(): any;
     log(): {
@@ -136,3 +137,11 @@ export type Rules = {
     deserialize?: Function;
     toMoveEvent?: Function;
 };
+/**
+ * Layer 1 — owns lifecycle, the (injected) clock, and the move log; delegates all
+ * game meaning to an injected `rules` object. This is where timing authority
+ * lives: on the client `clock` is `Date.now` (cosmetic); on a server it is the
+ * server's clock (authoritative). The session never calls a wall clock itself.
+ * Future home:
+ */
+export type MoveEvent = import("../minesweeper/rules.js").MoveEvent;
