@@ -23,3 +23,15 @@ export { generateBoard, validateLayout } from './minesweeper/board.js'
 
 // Shared level presets (also consumed by the DOM client)
 export { levels } from '../levels.js'
+
+// Public type aliases — re-exported so consumers can
+// `import type { Layout, … } from '@cozy-games/mnswpr/core'` against the barrel,
+// without reaching into internal `core/minesweeper/*` modules or an ambient shim.
+// These are type-only; they add nothing to the runtime bundle.
+/** @typedef {import('./minesweeper/board.js').Layout} Layout */
+/** @typedef {import('./minesweeper/board.js').LayoutCell} LayoutCell */
+/** @typedef {import('./minesweeper/board.js').Config} Config */
+/** @typedef {import('./minesweeper/rules.js').Move} Move */
+/** @typedef {import('./minesweeper/rules.js').MoveEvent} MoveEvent */
+/** @typedef {import('./minesweeper/rules.js').MoveEventType} MoveEventType */
+/** @typedef {import('./minesweeper/rules.js').Phase} Phase */
