@@ -1,6 +1,6 @@
 {
   "name": "@cozy-games/move-log",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Game-blind, schema-versioned log of a recorded run of move events — generic over the game's own event vocabulary",
   "author": "Ayo Ayco",
   "type": "module",
