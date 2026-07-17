@@ -15,4 +15,7 @@ console.log('Copying apps/mnswpr/README.md into packages/mnswpr/ for the publish
 copyFileSync(resolve(root, 'apps/mnswpr/README.md'), resolve(libDir, 'README.md'))
 
 execSync('npm login')
-execSync('npm publish', { cwd: libDir, stdio: 'inherit' })
+// Use `pnpm publish` (not `npm publish`) so `workspace:^` protocol deps are
+// rewritten to real version ranges in the published package. `npm publish`
+// leaves them verbatim, which produces uninstallable packages.
+execSync('pnpm publish', { cwd: libDir, stdio: 'inherit' })
