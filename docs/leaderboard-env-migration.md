@@ -7,7 +7,7 @@ Every environment — a developer running `pnpm dev`, a Netlify preview, and the
 live site — reads and writes the same collections (`mw-scores`, `mw-all`,
 `mw-config`, legacy `mw-leaders`) in the single Firebase project
 `secure-moment-188701`. `version`/`import.meta.env.MODE` only affects UI text
-([lib/mnswpr.js:96](../lib/mnswpr.js:96)); it never changes collection names. So
+(in the [@cozy-games/mnswpr engine](https://github.com/ayo-run/cozy-games)); it never changes collection names. So
 local play pollutes the production leaderboard.
 
 We keep **one Firebase project** (there is no separate prod project — see
@@ -27,7 +27,7 @@ Existing production data under `mw-*` is untouched; `mw-test-*` starts empty.
 
 | Piece | Now | After |
 | --- | --- | --- |
-| Namespace | hardcoded `'mw'` in [app/main.js](../app/main.js) | `import.meta.env.VITE_LB_NAMESPACE` |
+| Namespace | hardcoded `'mw'` in [app/main.js](../src/main.js) | `import.meta.env.VITE_LB_NAMESPACE` |
 | Dev writes | into prod `mw-*` | into `mw-test-*` |
 | Rules | only `mw-*` matches | any `mw` / `mw-test` namespace |
 | Indexes | `games` collection group | unchanged (already covers all namespaces) |
@@ -37,14 +37,14 @@ Existing production data under `mw-*` is untouched; `mw-test-*` starts empty.
 
 ### 1. Add the namespace env var
 
-- [app/.env.development](../app/.env.development): add `VITE_LB_NAMESPACE=mw-test`
-- [app/.env.example](../app/.env.example): document `VITE_LB_NAMESPACE`
+- [app/.env.development](../.env.development): add `VITE_LB_NAMESPACE=mw-test`
+- [app/.env.example](../.env.example): document `VITE_LB_NAMESPACE`
 - Netlify (production build): set `VITE_LB_NAMESPACE=mw` **and** the same
   `VITE_FIREBASE_*` values as dev (same project).
 
 ### 2. Read it in the app
 
-In [app/main.js](../app/main.js), replace the hardcoded namespace. Default to the
+In [app/main.js](../src/main.js), replace the hardcoded namespace. Default to the
 **test** namespace so a missing/misconfigured var can never write to production:
 
 ```js
@@ -59,7 +59,7 @@ of a missing var is an empty test board, never prod pollution.)
 
 ### 3. Generalize the security rules
 
-Rewrite [firestore.rules](../firestore.rules) so a rule matches by the namespace
+Rewrite [firestore.rules](../firebase/firestore.rules) so a rule matches by the namespace
 *suffix* instead of a literal `mw-` prefix. Firestore ORs all matching rules, so
 one set of generic blocks covers `mw`, `mw-test`, and any future namespace.
 Note: `{ns}-scores/{cat}/games/{id}`, `{ns}-all/{id}/games/{s}` and
@@ -117,7 +117,7 @@ The regex `mw(-[a-z]+)?-scores` matches `mw-scores` and `mw-test-scores`
 
 Time windows are rolling (`time_stamp >=`) and all-time sorts by `score`, so the
 queries use Firestore's automatic single-field indexes.
-[firestore.indexes.json](../firestore.indexes.json) is empty — nothing to add for
+[firestore.indexes.json](../firebase/firestore.indexes.json) is empty — nothing to add for
 any namespace.
 
 ### 5. Seed the test config doc
@@ -155,6 +155,6 @@ Both aliases target the one project we actually have:
 
 ## Rollback
 
-Set `VITE_LB_NAMESPACE=mw` everywhere (or revert [app/main.js](../app/main.js) to
+Set `VITE_LB_NAMESPACE=mw` everywhere (or revert [app/main.js](../src/main.js) to
 the hardcoded `'mw'`) to return to shared collections. The generalized rules are
 a superset of the old ones, so they stay valid either way.

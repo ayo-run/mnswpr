@@ -91,7 +91,8 @@ pnpm run db:stop    # stop a stray emulator holding :8080
 ```
 
 Deploy scripts (`deploy:db`, `deploy:site`) also exist but require project
-credentials, so they're for maintainers. See [README.md](README.md) and
+credentials, so they're for maintainers — the first-time setup is documented in
+[`docs/deployment.md`](docs/deployment.md). See [README.md](README.md) and
 [`docs/`](docs/) for the full backend reference.
 
 ## Project structure

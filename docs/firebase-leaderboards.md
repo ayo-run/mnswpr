@@ -6,9 +6,9 @@ still has to be touched in the Firebase Console.
 ## Overview
 
 Leaderboards are powered by Firestore (`firebase/firestore/lite`) through the
-reusable, game-agnostic [`@cozy-games/leaderboard`](../leaderboard/leader-board.js)
+reusable, game-agnostic [`@cozy-games/leaderboard`](https://github.com/ayo-run/cozy-games)
 package. The app wires minesweeper's specifics (finish-time as the `score`,
-ascending sort, time formatting) in [`app/main.js`](../app/main.js).
+ascending sort, time formatting) in [`app/main.js`](../src/main.js).
 
 The board offers four time windows — **Today** (default), **Week**, **Month**,
 **All Time** — selected by tabs. Each played game that qualifies is written to a
@@ -64,11 +64,11 @@ competition, not a boundary quirk.
 
 The Firestore schema (security rules + indexes) lives in the repo:
 
-- [`firebase.json`](../firebase.json) — points at the rules and indexes files.
-- [`.firebaserc`](../.firebaserc) — project aliases: `prod` (default, live site)
+- [`firebase.json`](../firebase/firebase.json) — points at the rules and indexes files.
+- [`.firebaserc`](../firebase/.firebaserc) — project aliases: `prod` (default, live site)
   and `dev` (`secure-moment-188701`).
-- [`firestore.rules`](../firestore.rules) — access + validation rules.
-- [`firestore.indexes.json`](../firestore.indexes.json) — **empty**: rolling
+- [`firestore.rules`](../firebase/firestore.rules) — access + validation rules.
+- [`firestore.indexes.json`](../firebase/firestore.indexes.json) — **empty**: rolling
   windows (`time_stamp >=`) and all-time (`orderBy('score')`) use Firestore's
   automatic single-field indexes, so no composite indexes are needed.
 
@@ -76,7 +76,7 @@ The Firestore schema (security rules + indexes) lives in the repo:
 
 There is **one Firebase project** (`secure-moment-188701`). Production and test
 data are separated not by project but by **collection namespace**, chosen with
-the `VITE_LB_NAMESPACE` env var read in [`app/main.js`](../app/main.js):
+the `VITE_LB_NAMESPACE` env var read in [`app/main.js`](../src/main.js):
 
 | Environment | `VITE_LB_NAMESPACE` | Collections |
 | --- | --- | --- |
@@ -88,7 +88,7 @@ project — so the only difference is the namespace. `app/main.js` defaults to t
 **test** namespace, so a missing/misconfigured var can never write into the
 production board; production must set `VITE_LB_NAMESPACE=mw` explicitly.
 
-Dev config lives in the committed [`app/.env.development`](../app/.env.development)
+Dev config lives in the committed [`app/.env.development`](../.env.development)
 (the keys are public). Production sets `VITE_FIREBASE_*` **and**
 `VITE_LB_NAMESPACE=mw` as Netlify environment variables. `.env.production` and
 `.env*.local` stay gitignored.
@@ -121,7 +121,7 @@ pnpm exec firebase deploy --only firestore:rules,firestore:indexes --project dev
 ```
 
 > ⚠️ Deploying **replaces** whatever rules currently live in the Console. The
-> committed [`firestore.rules`](../firestore.rules) is written to cover every
+> committed [`firestore.rules`](../firebase/firestore.rules) is written to cover every
 > collection the app uses, so a deploy is safe — but review it first.
 
 No composite indexes are required — the rolling-window and all-time queries use
@@ -131,9 +131,9 @@ Firestore's automatic single-field indexes.
 
 Local development runs against the **Firebase Local Emulator Suite** by default —
 no cloud, no deploy, no auth, no `permission-denied` — and it loads the committed
-[`firestore.rules`](../firestore.rules) and [`firestore.indexes.json`](../firestore.indexes.json)
+[`firestore.rules`](../firebase/firestore.rules) and [`firestore.indexes.json`](../firebase/firestore.indexes.json)
 locally (so you validate them before deploying). The flag
-`VITE_FIRESTORE_EMULATOR=1` is set in [`app/.env.development`](../app/.env.development).
+`VITE_FIRESTORE_EMULATOR=1` is set in [`app/.env.development`](../.env.development).
 
 > Prerequisite: the Firestore emulator is a Java process, so you need a JDK
 > (11+) installed. `firebase-tools` is a pinned devDependency of this app
@@ -166,7 +166,7 @@ Everything above is doable via the CLI. If you can't use it:
   (If you ever add a query that needs a composite index, Firestore prints a
   console error with a direct link to create it.)
 - **Rules**: edit them directly under **Firestore → Rules** in the Console
-  (paste from [`firestore.rules`](../firestore.rules)).
+  (paste from [`firestore.rules`](../firebase/firestore.rules)).
 - **Server config**: `mw-config/configuration` (`passingStatus`, `message`) is
   **always** managed by hand in the Console — it is read-only to clients and has
   no code representation. `passingStatus` is the `status` value that makes a game
@@ -175,7 +175,7 @@ Everything above is doable via the CLI. If you can't use it:
 ## Legends (frozen hall of fame)
 
 The old all-time leaders are preserved as a **fully-rendered static page** —
-[`legends.html`](../legends.html). The records are baked straight into the
+[`legends.html`](../src/legends.html). The records are baked straight into the
 HTML with times pre-formatted; there is **no JavaScript and no Firebase** at page
 load. The data never changes.
 
@@ -209,7 +209,7 @@ new LeaderBoardService({
 
 To run on **Supabase** instead, swap in `SupabaseAdapter` — nothing else in the
 game changes. The adapter interface and the Supabase table/SQL schema are
-documented in [`leaderboard/README.md`](../leaderboard/README.md).
+documented in the [@cozy-games/leaderboard README](https://github.com/ayo-run/cozy-games).
 
 Then submit `{ name, playerId, score, category, time_stamp, status?, meta? }`
 and render with `render(category, title, duration)`.
