@@ -18,9 +18,9 @@
     "db:stop": "pkill -f '[c]loud-firestore-emulator'; pkill -f '[f]irebase.* emulators:'; true"
   },
   "devDependencies": {
-    "@cozy-games/mnswpr": "workspace:*",
-    "@cozy-games/leaderboard": "workspace:*",
-    "@cozy-games/utils": "workspace:*",
+    "@cozy-games/mnswpr": "^0.5.4",
+    "@cozy-games/leaderboard": "^0.1.1",
+    "@cozy-games/utils": "^0.0.3",
     "firebase": "^12.11.0",
     "firebase-tools": "^15.22.4",
     "netlify-cli": "^26.1.0",
