@@ -7,7 +7,7 @@ import {
   digestCandidate,
   maskTerm,
   matchReserved,
-  isAllowedCoAuthor,
+  isToolCoAuthor,
   checkStructural,
   scanText,
   isAllowedByMarker,
@@ -116,36 +116,42 @@ describe('maskTerm', () => {
   })
 })
 
-describe('isAllowedCoAuthor', () => {
-  it('accepts the repo\'s listed humans, case-insensitively', () => {
-    expect(isAllowedCoAuthor('ayo@ayco.io', policy.allowedCoAuthors)).toBe(true)
-    expect(isAllowedCoAuthor('Ramon.AycoJr@gmail.com', policy.allowedCoAuthors)).toBe(true)
+describe('isToolCoAuthor', () => {
+  it('matches a tool address by domain, case-insensitively', () => {
+    expect(isToolCoAuthor('noreply@anthropic.com', policy.toolCoAuthors)).toBe(true)
+    expect(isToolCoAuthor('NoReply@OpenAI.com', policy.toolCoAuthors)).toBe(true)
   })
 
-  it('accepts a `*` suffix pattern', () => {
-    expect(isAllowedCoAuthor('1234+someone@users.noreply.github.com', policy.allowedCoAuthors)).toBe(true)
+  it('leaves dependabot alone — it is honest automation, not AI attribution', () => {
+    expect(isToolCoAuthor('49699333+dependabot[bot]@users.noreply.github.com', policy.toolCoAuthors)).toBe(false)
   })
 
-  it('rejects anyone else, and an empty address', () => {
-    expect(isAllowedCoAuthor('someone@example.com', policy.allowedCoAuthors)).toBe(false)
-    expect(isAllowedCoAuthor('ayo@ayco.io.example.com', policy.allowedCoAuthors)).toBe(false)
-    expect(isAllowedCoAuthor('', policy.allowedCoAuthors)).toBe(false)
+  it('treats every other address as a human — contributors are not allowlisted', () => {
+    expect(isToolCoAuthor('jane@example.com', policy.toolCoAuthors)).toBe(false)
+    expect(isToolCoAuthor('ayo@ayco.io', policy.toolCoAuthors)).toBe(false)
+    expect(isToolCoAuthor('1234+someone@users.noreply.github.com', policy.toolCoAuthors)).toBe(false)
+    expect(isToolCoAuthor('', policy.toolCoAuthors)).toBe(false)
+  })
+
+  it('does not match a lookalike domain', () => {
+    expect(isToolCoAuthor('someone@anthropic.com.example.com', policy.toolCoAuthors)).toBe(false)
   })
 })
 
 describe('checkStructural: co-author trailers', () => {
-  it('allows a listed co-author', () => {
+  it('allows an outside human contributor using any address', () => {
+    expect(checkStructural('Co-authored-by: Jane Dev <jane@example.com>', policy)).toEqual([])
     expect(checkStructural('Co-authored-by: Ayo <ayo@ayco.io>', policy)).toEqual([])
   })
 
-  it('flags an unlisted one, whatever the casing', () => {
-    const findings = checkStructural('Co-Authored-By: Some Tool <tool@example.com>', policy)
+  it('flags a tool trailer, whatever the casing', () => {
+    const findings = checkStructural('Co-Authored-By: Some Model <noreply@anthropic.com>', policy)
     expect(findings).toHaveLength(1)
-    expect(findings[0].rule).toBe('unlisted-co-author')
+    expect(findings[0].rule).toBe('tool-co-author')
   })
 
-  it('flags a trailer with no address at all', () => {
-    expect(checkStructural('Co-authored-by: Some Tool', policy)).toHaveLength(1)
+  it('allows a trailer with no address — a human typo, not a tool', () => {
+    expect(checkStructural('Co-authored-by: Jane Dev', policy)).toEqual([])
   })
 
   it('ignores prose that merely mentions co-authors', () => {

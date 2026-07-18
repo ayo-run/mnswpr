@@ -33,7 +33,8 @@ const ALLOW_MARKER = 'content-policy: allow-next-line'
  * @property {number} version
  * @property {string} salt - HMAC key for the digest list.
  * @property {string[]} digests - Reserved-term digests, maintainer-managed.
- * @property {string[]} allowedCoAuthors - Emails; a leading `*` matches a suffix.
+ * @property {string[]} toolCoAuthors - Non-human co-author addresses to reject;
+ *   a leading `*` matches a suffix. Every other address is a human, and passes.
  */
 
 /**
@@ -131,14 +132,16 @@ const CO_AUTHOR_PATTERN = /^\s*co-authored-by:\s*(.+)$/i
 const EMAIL_PATTERN = /<([^>]+)>/
 
 /**
+ * Is this co-author address a tool rather than a person? Humans are the default:
+ * only addresses matching the policy's tool list are rejected.
  * @param {string} email
- * @param {string[]} [allowed] - Exact emails, or `*@domain` suffix patterns.
+ * @param {string[]} [tools] - Exact emails, or `*@domain` suffix patterns.
  * @returns {boolean}
  */
-export function isAllowedCoAuthor(email, allowed = []) {
+export function isToolCoAuthor(email, tools = []) {
   const value = String(email).trim().toLowerCase()
   if (!value) return false
-  return allowed.some((entry) => {
+  return tools.some((entry) => {
     const pattern = String(entry).trim().toLowerCase()
     return pattern.startsWith('*') ? value.endsWith(pattern.slice(1)) : value === pattern
   })
@@ -171,8 +174,8 @@ export function checkStructural(line, policy) {
   const trailer = CO_AUTHOR_PATTERN.exec(line)
   if (trailer) {
     const email = (EMAIL_PATTERN.exec(trailer[1]) || [])[1] || ''
-    if (!isAllowedCoAuthor(email, policy.allowedCoAuthors)) {
-      findings.push({ rule: 'unlisted-co-author', detail: preview(line) })
+    if (isToolCoAuthor(email, policy.toolCoAuthors)) {
+      findings.push({ rule: 'tool-co-author', detail: preview(line) })
     }
   }
   return findings

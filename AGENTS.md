@@ -126,7 +126,7 @@ App-owned modules in `modules/`: `UserService` (`user/user.js`) derives a non-cr
 
 - **Code style is enforced by ESLint Stylistic**, not Prettier: 2-space indent, single quotes, **no semicolons**, no trailing commas, spaces inside `{ braces }` but not `[brackets]`. Run `pnpm lint:fix` before committing. Both `**/*.js` and `**/*.css` are linted (CSS via `@eslint/css`).
 - `modules/` uses ES classes; `scripts/` uses plain functions. Match the surrounding style of the file you edit.
-- **Content policy.** Commit messages, branch names, PR text, and contributed lines are checked by `scripts/check-content.mjs` (hooks + the `Checks` workflow) against `.repo-policy.json`. Write commit messages in plain project voice; no tool-attribution trailers or footers, no `Co-Authored-By:` line for anyone outside the policy's `allowedCoAuthors`, no session links.
+- **Content policy.** Commit messages, branch names, PR text, and contributed lines are checked by `scripts/check-content.mjs` (hooks + the `Checks` workflow) against `.repo-policy.json`. Write commit messages in plain project voice; no tool-attribution trailers or footers, no `Co-Authored-By:` line for a non-human contributor (the policy's `toolCoAuthors` list — human co-authors are always fine), no session links.
 - The same scanner matches text against a maintainer-managed reserved-terms list. Findings report a location and a masked preview, never the term. If one flags your change, reword it or ask a maintainer — don't edit `.repo-policy.json`.
 - **Source stays JS + JSDoc (`// @ts-check`)** — no TypeScript. Nothing is published from this repo, so there is no type-generation step here; the `.d.ts` files shipped by `@cozy-games/*` are generated in the cozy-games repo.
 
