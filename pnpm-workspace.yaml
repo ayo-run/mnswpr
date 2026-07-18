@@ -1,7 +1,5 @@
 packages:
   - "apps/*"
-  - "packages/*"
-  - "sites/*"
 allowBuilds:
   '@firebase/util': false
   '@parcel/watcher': false
@@ -14,3 +12,4 @@ allowBuilds:
   web-component-base: false
 minimumReleaseAgeExclude:
   - web-component-base@5.0.0
+  - '@cozy-games/mnswpr@0.5.4'

@@ -54,14 +54,14 @@ importers:
   apps/mnswpr:
     devDependencies:
       '@cozy-games/leaderboard':
-        specifier: workspace:*
-        version: link:../../packages/leaderboard
+        specifier: ^0.1.1
+        version: 0.1.1(firebase@12.11.0)
       '@cozy-games/mnswpr':
-        specifier: workspace:*
-        version: link:../../packages/mnswpr
+        specifier: ^0.5.4
+        version: 0.5.4
       '@cozy-games/utils':
-        specifier: workspace:*
-        version: link:../../packages/utils
+        specifier: ^0.0.3
+        version: 0.0.3
       firebase:
         specifier: ^12.11.0
         version: 12.11.0
@@ -74,34 +74,6 @@ importers:
       web-component-base:
         specifier: ^5.0.0
         version: 5.0.0
-
-  packages/leaderboard:
-    dependencies:
-      '@cozy-games/utils':
-        specifier: workspace:^
-        version: link:../utils
-      firebase:
-        specifier: ^12.11.0
-        version: 12.11.0
-      web-component-base:
-        specifier: ^5.0.0
-        version: 5.0.0
-
-  packages/mnswpr:
-    devDependencies:
-      '@cozy-games/utils':
-        specifier: workspace:*
-        version: link:../utils
-
-  packages/move-log: {}
-
-  packages/replay:
-    dependencies:
-      '@cozy-games/move-log':
-        specifier: workspace:*
-        version: link:../move-log
-
-  packages/utils: {}
 
 packages:
 
@@ -182,6 +154,23 @@ packages:
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
     engines: {node: '>=0.1.90'}
+
+  '@cozy-games/leaderboard@0.1.1':
+    resolution: {integrity: sha512-jjzgXaDx3DggJNbNf5Vtd99cA8jwKcTwDhgaVlEVBM5dP3y0Q7BwIMRTWjfqbTZVs2BueM5I/zoMt/3d628+yA==}
+    peerDependencies:
+      firebase: ^12.11.0
+    peerDependenciesMeta:
+      firebase:
+        optional: true
+
+  '@cozy-games/mnswpr@0.5.4':
+    resolution: {integrity: sha512-7nlOpDGPOhDkON5esOocZXQwcd9YLKcMm6gmLuqHyzGhdvfA23mson5PFIUX9enLdc1FZRMsSLdQdAvHKIay0A==}
+
+  '@cozy-games/utils@0.0.2':
+    resolution: {integrity: sha512-lra+rmlpLuUQRKwFfNrQUMjf2ujr4winqYEWW7+IWh+78Z3ZH/ewaGAsLnHdXH4BXauE4MEauQoH+HyhWDGSWg==}
+
+  '@cozy-games/utils@0.0.3':
+    resolution: {integrity: sha512-gXOalygDBUrUJp0iWhh7SFgRrn925M5qxTQwIMV0xjybDiGumxh1OC88VQnLxc5lWmItOC0jB/Y0ptgscr3sfQ==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -6756,6 +6745,19 @@ snapshots:
     optional: true
 
   '@colors/colors@1.6.0': {}
+
+  '@cozy-games/leaderboard@0.1.1(firebase@12.11.0)':
+    dependencies:
+      '@cozy-games/utils': 0.0.2
+      web-component-base: 5.0.0
+    optionalDependencies:
+      firebase: 12.11.0
+
+  '@cozy-games/mnswpr@0.5.4': {}
+
+  '@cozy-games/utils@0.0.2': {}
+
+  '@cozy-games/utils@0.0.3': {}
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
