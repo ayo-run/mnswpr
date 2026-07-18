@@ -1,6 +1,6 @@
 /**
  * Post-install convenience: make a Java runtime available for the Firebase
- * Firestore emulator (used by `pnpm -F mnswpr dev` / `db:start`). The emulator is
+ * Firestore emulator (used by `pnpm run dev` / `db:start`). The emulator is
  * a Java program and firebase-tools does not bundle a JRE.
  *
  * Installs a Temurin JRE 21 into the user's home (~/.local) WITHOUT sudo and
@@ -9,7 +9,7 @@
  *   - non-fatal:  never fails `pnpm install` — on any problem it warns, exits 0
  *   - opt-out:    set SKIP_JRE_SETUP=1 (also auto-skips when CI is set)
  * Only Linux/macOS on x64/arm64 are auto-handled; anything else prints manual
- * instructions (see apps/mnswpr/README.md).
+ * instructions (see README.md).
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
@@ -24,7 +24,7 @@ try {
   await main()
 } catch (err) {
   warn(`skipped (${err?.message || err}).`)
-  warn('The Firestore emulator needs Java 11+ — install it manually, see apps/mnswpr/README.md.')
+  warn('The Firestore emulator needs Java 11+ — install it manually, see README.md.')
 }
 process.exit(0)
 
@@ -36,11 +36,11 @@ async function main() {
   const adoptOs = { linux: 'linux', darwin: 'mac' }[platform()]
   const adoptArch = { x64: 'x64', arm64: 'aarch64' }[arch()]
   if (!adoptOs || !adoptArch) {
-    warn(`no auto-install for ${platform()}/${arch()} — install a JRE 21 manually (apps/mnswpr/README.md).`)
+    warn(`no auto-install for ${platform()}/${arch()} — install a JRE 21 manually (README.md).`)
     return
   }
   if (!hasTool('tar')) {
-    warn('`tar` not found — cannot unpack the JRE. Install Java manually (apps/mnswpr/README.md).')
+    warn('`tar` not found — cannot unpack the JRE. Install Java manually (README.md).')
     return
   }
 

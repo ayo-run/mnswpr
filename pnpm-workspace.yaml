@@ -1,5 +1,5 @@
-packages:
-  - "apps/*"
+# Not a workspace — this repo is a single package at the root. pnpm 11 reads its
+# settings from this file, so it stays for `allowBuilds` / `minimumReleaseAgeExclude`.
 allowBuilds:
   '@firebase/util': false
   '@parcel/watcher': false

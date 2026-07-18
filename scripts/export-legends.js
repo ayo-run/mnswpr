@@ -4,9 +4,8 @@
  * a FULLY-RENDERED, static page — no runtime JS, no Firebase at page load.
  *
  * The data never changes, so the page is a frozen artifact. Re-run only if you
- * ever need to regenerate it. Because `firebase` is an app-workspace dependency,
- * run it so Node can resolve it, e.g. from the app directory:
- *   (cd apps/mnswpr && node scripts/export-legends.js)
+ * ever need to regenerate it. Run it from the repo root:
+ *   node scripts/export-legends.js
  */
 import { writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'

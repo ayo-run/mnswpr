@@ -16,7 +16,7 @@ rules_version = '2'
 // block is guarded by a regex on the captured collection name.
 //
 // Deploy with (see docs/firebase-leaderboards.md):
-//   pnpm -F mnswpr exec firebase deploy --only firestore:rules --project prod
+//   pnpm exec firebase deploy --only firestore:rules --project prod
 service cloud.firestore {
   match /databases/{database}/documents {
 

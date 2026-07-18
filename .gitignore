@@ -1,17 +1,17 @@
 node_modules/
 dist/
 
-# generated at publish time from apps/mnswpr/README.md (see scripts/publish-lib.js)
-packages/mnswpr/README.md
-
 .claude
 
 # Production / local Firebase config values are not committed — set them as
 # Netlify env vars, or keep them in a local, gitignored env file. Dev values
-# live in the committed apps/mnswpr/.env.development (public, non-secret keys).
+# live in the committed .env.development (public, non-secret keys).
 .env.production
 .env.local
 .env.*.local
+
+# Netlify CLI site link (written by `netlify link`)
+.netlify/
 
 # Firebase emulator artifacts
 firebase-debug.log
@@ -22,6 +22,3 @@ ui-debug.log
 *~
 *swo
 *swp
-
-# TEMPORARY - or unnecesary if done
-apps/mnswpr/MIGRATION.md

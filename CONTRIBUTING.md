@@ -10,8 +10,8 @@ develop, test, and submit changes.
 
 - **Node.js** — the version pinned in [`.nvmrc`](.nvmrc) (`lts/*`). With
   [nvm](https://github.com/nvm-sh/nvm): `nvm use`.
-- **pnpm** — this is a [pnpm](https://pnpm.io) workspace; **pnpm is required**
-  (npm/yarn will not work). The repo pins its pnpm version via the
+- **pnpm** — **pnpm is required** (npm/yarn will not work). The repo pins its
+  pnpm version via the
   `packageManager` field, so the simplest way to get the right one is Corepack:
   `corepack enable`.
 - **Java (JDK 11+, 21 recommended)** — only needed to run the local Firestore
@@ -22,46 +22,43 @@ develop, test, and submit changes.
 
 ## Project Structure
 
-- `apps/` - Playable games (each deploys independently)
-- `packages/` - Shared, publishable libraries
-- `sites/` - Docs (Astro Starlight) and UI demos  — placeholders for now
+This repo is a single package at the root — the mnswpr.com web app. `main.js`
+and `index.html` are the app itself, `modules/` holds the app-owned services,
+`scripts/` holds tooling, and `docs/` documents the backend. The game engine and
+leaderboard come from npm ([ayo-run/cozy-games](https://github.com/ayo-run/cozy-games));
+there is no local `packages/` to edit.
 
-Each app owns its own backend config (e.g. mnswpr's Firestore rules live in
-`apps/mnswpr/`); the shared packages stay backend-agnostic.
+Backend config (Firestore rules, Firebase project aliases, Netlify hosting) is
+committed at the root — see [AGENTS.md](AGENTS.md) "Infra".
 
 ## Setup
 
 ```bash
-pnpm i        # install all workspace dependencies
+pnpm i        # install dependencies
 ```
 
-## Workspace commands (run from the repo root)
+## Commands (all run from the repo root)
 
 ```bash
 pnpm test           # run the whole test suite once (Vitest, jsdom)
 pnpm test:watch     # tests in watch mode
 pnpm lint           # eslint (JS + CSS)
 pnpm lint:fix       # eslint --fix
-pnpm build:lib      # build the publishable engine -> packages/mnswpr/dist
 ```
 
-## Running a game locally
-
-Apps aren't run from the root — target one by name with pnpm's `-F` filter. Apps
-are named `<name>` (e.g. `mnswpr`), so every app runs the same way
-(`pnpm -F <name> run <script>`):
+## Running the game locally
 
 ```bash
-pnpm -F mnswpr run dev          # Vite dev server + Firestore emulator (auto-seeded) — needs Java
-pnpm -F mnswpr run dev:no-db    # Vite only, no emulator (UI work, or no Java)
-pnpm -F mnswpr run build        # build the app     -> apps/mnswpr/dist
-pnpm -F mnswpr run preview      # preview the production build
+pnpm run dev          # Vite dev server + Firestore emulator (auto-seeded) — needs Java
+pnpm run dev:no-db    # Vite only, no emulator (UI work, or no Java)
+pnpm run build        # build the app     -> dist
+pnpm run preview      # preview the production build
 ```
 
 ## Tests
 
 Tests run under **Vitest** with a **jsdom** environment and live next to the code
-they exercise (`packages/*/test/`). They drive real behavior — e.g. mounting the
+they exercise (`test/`, `scripts/test/`). They drive real behavior — e.g. mounting the
 game and dispatching DOM events — not just isolated unit calls. Run `pnpm test`
 (or `pnpm test:watch`) before opening a PR, and add tests for new behavior.
 
@@ -75,8 +72,7 @@ Style is enforced by **ESLint (Stylistic)**, not Prettier:
 
 Run `pnpm lint:fix` before committing. The codebase is **plain JavaScript with
 JSDoc + `// @ts-check`** — no TypeScript. Match the style and patterns of the file
-you're editing (the game engine uses plain functions and closures; `packages/utils`
-and the app modules use ES classes).
+you're editing (`modules/` uses ES classes; `scripts/` uses plain functions).
 
 A **pre-commit hook** runs the linter and a secret scan automatically — commits
 fail if either does. Keep credentials and any `.env.production` out of commits.
@@ -89,22 +85,19 @@ devDependencies) — no web dashboards. For mnswpr (Firestore + Netlify), the lo
 DB emulator is all a contributor needs:
 
 ```bash
-pnpm -F mnswpr run db:start   # start the local Firestore emulator (standalone) — needs Java
-pnpm -F mnswpr run db:seed    # seed the running emulator with sample data
-pnpm -F mnswpr run db:stop    # stop a stray emulator holding :8080
+pnpm run db:start   # start the local Firestore emulator (standalone) — needs Java
+pnpm run db:seed    # seed the running emulator with sample data
+pnpm run db:stop    # stop a stray emulator holding :8080
 ```
 
 Deploy scripts (`deploy:db`, `deploy:site`) also exist but require project
-credentials, so they're for maintainers. See
-[apps/mnswpr/README.md](apps/mnswpr/README.md) and that app's `docs/` for the full
-backend reference.
+credentials, so they're for maintainers. See [README.md](README.md) and
+[`docs/`](docs/) for the full backend reference.
 
-## Project structure & decisions
+## Project structure
 
-The repo layout is in the [README](README.md#layout). Significant architecture
-choices are recorded in [`docs/decisions/`](docs/decisions/) — worth a read before
-a large change. Shared packages stay backend-agnostic; each app owns its own
-backend config.
+The repo layout and architecture are documented in [AGENTS.md](AGENTS.md) —
+worth a read before a large change.
 
 ## Submitting changes
 

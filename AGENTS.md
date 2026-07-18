@@ -6,27 +6,27 @@ Guidance for AI coding agents working in this repository.
 
 Classic Minesweeper as a vanilla web game — no framework, no TypeScript (JSDoc + `// @ts-check` only). Deployed at [mnswpr.com](https://mnswpr.com) (Netlify), with a Firestore-backed leaderboard.
 
-**This repo is only the app.** The engine, leaderboard, and shared services (`@cozy-games/mnswpr`, `@cozy-games/leaderboard`, `@cozy-games/utils`) live in [ayo-run/cozy-games](https://github.com/ayo-run/cozy-games) and are consumed here **from npm** — there is no local `packages/` to edit. A change to game mechanics, leaderboard internals, or the shared services belongs in that repo and arrives here as a version bump in `apps/mnswpr/package.json`.
+**This repo is only the app.** The engine, leaderboard, and shared services (`@cozy-games/mnswpr`, `@cozy-games/leaderboard`, `@cozy-games/utils`) live in [ayo-run/cozy-games](https://github.com/ayo-run/cozy-games) and are consumed here **from npm** — there is no local `packages/` to edit. A change to game mechanics, leaderboard internals, or the shared services belongs in that repo and arrives here as a version bump in `package.json`.
 
-Structurally it is still a pnpm workspace (`pnpm-workspace.yaml` → `apps/*`) with a single member, `apps/mnswpr`, so app scripts are addressed with pnpm's `-F` filter.
+Structurally it is a single package at the repo root — no workspace, no `apps/` nesting. Every script runs from the root with plain `pnpm run <script>`.
 
 ## Commands
 
-Workspace-wide commands run from the root; app commands target the app with pnpm's `-F` filter. `pnpm dev` and `pnpm build` are root aliases for the two most common ones.
+All commands run from the repo root.
 
 ```bash
-pnpm i              # install (pnpm is required — this is a pnpm workspace)
+pnpm i              # install (pnpm is required)
 pnpm test           # run the Vitest suite once (jsdom)
 pnpm test:watch     # run Vitest in watch mode
 pnpm lint           # eslint . (JS + CSS); runs automatically on pre-commit
 pnpm lint:fix       # eslint --fix
 pnpm scan:secrets   # secretlint over the tree
 
-pnpm -F mnswpr run dev            # Firestore emulator + auto-seed + dev server (emulators:exec) — most common; needs JDK 21+
-pnpm -F mnswpr run dev:no-db      # plain vite, no emulator (UI-only work / no JDK)
-pnpm -F mnswpr run build          # build the website -> apps/mnswpr/dist
-pnpm -F mnswpr run preview        # serve the production build
-pnpm -F mnswpr run build:preview  # build the app and serve the production preview
+pnpm run dev            # Firestore emulator + auto-seed + dev server (emulators:exec) — most common; needs JDK 21+
+pnpm run dev:no-db      # plain vite, no emulator (UI-only work / no JDK)
+pnpm run build          # build the website -> dist
+pnpm run preview        # serve the production build
+pnpm run build:preview  # build the app and serve the production preview
 ```
 
 Run a single test file or name: `pnpm vitest run scripts/test/check-content.test.js` · `pnpm vitest run -t 'partial name'`.
@@ -35,7 +35,7 @@ Run a single test file or name: `pnpm vitest run scripts/test/check-content.test
 
 **Every infra operation — provision, deploy hosting, deploy DB, manage env — is doable from the CLI, and every configuration/schema is codified in-repo.** Nothing lives only in a web dashboard. There are two distinct layers, both owned by the app:
 
-**1. App infra *config* — declarative, committed, deployed state.** These files ARE the source of truth; deploying just pushes them up. For `mnswpr`, all under `apps/mnswpr/`:
+**1. App infra *config* — declarative, committed, deployed state.** These files ARE the source of truth; deploying just pushes them up. All at the repo root:
 
 | File | Codifies |
 | --- | --- |
@@ -46,50 +46,52 @@ Run a single test file or name: `pnpm vitest run scripts/test/check-content.test
 | `netlify.toml` | Netlify hosting: build command, publish dir, redirects, headers, build env |
 | `.env.example` | The full env-var contract; real prod values are set as Netlify env vars via CLI, never committed |
 
-**2. App infra *tools* — the CLIs that act on that config.** They are versioned **devDependencies** of the app (not `npx`-on-demand, not global installs), so `pnpm install` pins them and every machine gets the same version. `mnswpr` depends on `firebase-tools` and `netlify-cli`; its scripts call the `firebase`/`netlify` binaries directly (pnpm puts the app's `node_modules/.bin` on `PATH`). A future app using a different stack (Postgres, a different host) declares *its* CLIs as *its* devDependencies and backs the same generic script names — so `pnpm -F <name> run deploy:db` stays uniform.
+**2. App infra *tools* — the CLIs that act on that config.** They are versioned **devDependencies** (not `npx`-on-demand, not global installs), so `pnpm install` pins them and every machine gets the same version. The app depends on `firebase-tools` and `netlify-cli`; its scripts call the `firebase`/`netlify` binaries directly (pnpm puts `node_modules/.bin` on `PATH`).
 
-Each app **owns its infra scripts** in its own `package.json` under generic, tech-agnostic names (`deploy:db`, not `deploy:firestore`) — run them by targeting the app with pnpm's `-F` filter (no root wrapper scripts):
+Infra scripts live in `package.json` under generic, tech-agnostic names (`deploy:db`, not `deploy:firestore`), so swapping the underlying stack doesn't change the command you type:
 
 ```bash
-pnpm -F mnswpr run db:start      # local DB emulator (mnswpr -> Firestore), standalone
-pnpm -F mnswpr run db:seed       # seed the running local emulator
-pnpm -F mnswpr run db:stop       # kill a stray/orphaned Firestore emulator holding :8080
-pnpm -F mnswpr run deploy:db     # deploy DB rules/indexes (-> firebase deploy --only firestore)
-pnpm -F mnswpr run deploy:site   # build + deploy hosting (-> netlify deploy --prod --dir=dist)
+pnpm run db:start      # local DB emulator (mnswpr -> Firestore), standalone
+pnpm run db:seed       # seed the running local emulator
+pnpm run db:stop       # kill a stray/orphaned Firestore emulator holding :8080
+pnpm run deploy:db     # deploy DB rules/indexes (-> firebase deploy --only firestore)
+pnpm run deploy:site   # build + deploy hosting (-> netlify deploy --prod --dir=dist)
 ```
 
 **One-time per app / per machine (all CLI, no dashboard):**
 
 ```bash
-pnpm -F mnswpr exec firebase login             # auth the Firebase CLI
-pnpm -F mnswpr exec netlify login              # auth the Netlify CLI
-pnpm -F mnswpr exec netlify link               # bind the app dir to its Netlify site (writes .netlify/, gitignored)
+pnpm exec firebase login             # auth the Firebase CLI
+pnpm exec netlify login              # auth the Netlify CLI
+pnpm exec netlify link               # bind the app dir to its Netlify site (writes .netlify/, gitignored)
 ```
 
 **Managing hosting env vars via CLI** (keeps prod Firebase keys + `VITE_LB_NAMESPACE=mw` out of git while still reproducible):
 
 ```bash
-pnpm -F mnswpr exec netlify env:set VITE_LB_NAMESPACE mw   # set one var
-pnpm -F mnswpr exec netlify env:import .env.production      # bulk-import from a local (gitignored) env file
-pnpm -F mnswpr exec netlify env:list                       # inspect what's set
+pnpm exec netlify env:set VITE_LB_NAMESPACE mw   # set one var
+pnpm exec netlify env:import .env.production      # bulk-import from a local (gitignored) env file
+pnpm exec netlify env:list                       # inspect what's set
 ```
 
 **Non-npm tools get a setup script instead of a devDependency.** The Firestore emulator needs **Java** (it's a JVM program), which isn't an npm package — so `pnpm install` runs a root `postinstall` (`scripts/ensure-java.mjs`) that installs a user-local Temurin JRE 21 into `~/.local` without `sudo` when `java` is missing — idempotent, non-fatal, and auto-skipped on `CI` / `SKIP_JRE_SETUP` / unsupported platforms. Any future infra tool that isn't on npm follows the same pattern (a checked-in setup script), never a manual install step.
 
-Tests run under **Vitest** with a jsdom environment (root config in `vitest.config.js`), which collects `apps/**/test/**/*.test.js` and `scripts/test/**/*.test.js`. Today only `scripts/test/` exists (the content scanner); app-level tests go in `apps/mnswpr/test/`. Engine and shared-package tests live in the cozy-games repo, not here. For anything visual or input-timing related, verify by running `pnpm -F mnswpr run dev` and playing.
+Tests run under **Vitest** with a jsdom environment (config in `vitest.config.js`), which collects `test/**/*.test.js` and `scripts/test/**/*.test.js`. Today only `scripts/test/` exists (the content scanner); app-level tests go in `test/`. Engine and shared-package tests live in the cozy-games repo, not here. For anything visual or input-timing related, verify by running `pnpm run dev` and playing.
 
 Node version: `.nvmrc` pins `lts/*`.
 
 ## Repository layout
 
-`pnpm-workspace.yaml` declares `apps/*`; `apps/mnswpr/` (package name `mnswpr`) is the only member.
+A single package (`mnswpr`) rooted at the repo root.
 
-- **`apps/mnswpr/`** — the mnswpr.com website. `main.js` composes the npm packages; `index.html` + `main.css` are the shell; `modules/` holds the two app-owned services; `scripts/` holds app scripts (dev seeding, legends export); `docs/` documents the backend. Owns its infra config (`firebase.json`, `firestore.rules`, `.firebaserc`, `netlify.toml`).
-- **`scripts/`** — repo-level tooling: `check-content.mjs` (content policy scanner, tested in `scripts/test/`) and `ensure-java.mjs` (postinstall JRE bootstrap).
+- **root** — the mnswpr.com website. `main.js` composes the npm packages; `index.html` + `main.css` are the shell. Infra config lives here too (`firebase.json`, `firestore.rules`, `.firebaserc`, `netlify.toml`, `vite.config.js`).
+- **`modules/`** — the two app-owned services (`user/`, `nickname/`).
+- **`docs/`** — backend documentation (Firestore data model, env migration).
+- **`scripts/`** — tooling: `seed-dev-scores.js` and `export-legends.js` (app scripts), plus `check-content.mjs` (content policy scanner, tested in `scripts/test/`) and `ensure-java.mjs` (postinstall JRE bootstrap).
 
 ## Architecture
 
-`apps/mnswpr/main.js` is ~75 lines and is the whole app: it wires three npm packages together and owns nothing else.
+`main.js` is ~75 lines and is the whole app: it wires three npm packages together and owns nothing else.
 
 **The engine is decoupled from the app via two hooks.** `new mnswpr(appId, version, hooks)` is a constructor function that imperatively builds a `<table>` grid in the DOM. It knows nothing about Firebase or leaderboards. The app injects behavior through:
 
@@ -112,18 +114,18 @@ The engine-internal notes below describe code that lives in the cozy-games repo 
 
 ## Leaderboard / Firebase
 
-Storage goes through `FirebaseAdapter` from `@cozy-games/leaderboard`; this repo supplies only configuration. Full data model, security rules, environments, and deployment: `apps/mnswpr/docs/firebase-leaderboards.md`.
+Storage goes through `FirebaseAdapter` from `@cozy-games/leaderboard`; this repo supplies only configuration. Full data model, security rules, environments, and deployment: `docs/firebase-leaderboards.md`.
 
-**Firebase config comes from `VITE_FIREBASE_*` env vars** — dev values are committed in `apps/mnswpr/.env.development`, production values are Netlify env vars. For a client-only Firebase app the API key is **not a secret** (access is governed by `firestore.rules`), so don't treat the committed dev config as a leaked credential or try to hide it.
+**Firebase config comes from `VITE_FIREBASE_*` env vars** — dev values are committed in `.env.development`, production values are Netlify env vars. For a client-only Firebase app the API key is **not a secret** (access is governed by `firestore.rules`), so don't treat the committed dev config as a leaked credential or try to hide it.
 
 **Namespace guards production.** `VITE_LB_NAMESPACE` selects the Firestore collection prefix and defaults to `mw-test`, so a missing env var can never write into the production board (`mw`). `VITE_FIRESTORE_EMULATOR=1` (set in `.env.development`) points dev at the local emulator; production builds always use real Firestore.
 
-App-owned modules in `apps/mnswpr/modules/`: `UserService` (`user/user.js`) derives a non-cryptographic `browserId` fingerprint from navigator/screen properties to attribute scores without accounts; `NicknameService` (`nickname/nickname.js`) prompts for a display name on first visit and renders the greeting bar.
+App-owned modules in `modules/`: `UserService` (`user/user.js`) derives a non-cryptographic `browserId` fingerprint from navigator/screen properties to attribute scores without accounts; `NicknameService` (`nickname/nickname.js`) prompts for a display name on first visit and renders the greeting bar.
 
 ## Conventions
 
 - **Code style is enforced by ESLint Stylistic**, not Prettier: 2-space indent, single quotes, **no semicolons**, no trailing commas, spaces inside `{ braces }` but not `[brackets]`. Run `pnpm lint:fix` before committing. Both `**/*.js` and `**/*.css` are linted (CSS via `@eslint/css`).
-- `apps/mnswpr/modules/` uses ES classes; `scripts/` uses plain functions. Match the surrounding style of the file you edit.
+- `modules/` uses ES classes; `scripts/` uses plain functions. Match the surrounding style of the file you edit.
 - **Content policy.** Commit messages, branch names, PR text, and contributed lines are checked by `scripts/check-content.mjs` (hooks + the `Checks` workflow) against `.repo-policy.json`. Write commit messages in plain project voice; no tool-attribution trailers or footers, no `Co-Authored-By:` line for anyone outside the policy's `allowedCoAuthors`, no session links.
 - The same scanner matches text against a maintainer-managed reserved-terms list. Findings report a location and a masked preview, never the term. If one flags your change, reword it or ask a maintainer — don't edit `.repo-policy.json`.
 - **Source stays JS + JSDoc (`// @ts-check`)** — no TypeScript. Nothing is published from this repo, so there is no type-generation step here; the `.d.ts` files shipped by `@cozy-games/*` are generated in the cozy-games repo.

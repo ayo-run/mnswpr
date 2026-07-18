@@ -1,13 +1,12 @@
 # Netlify hosting config for mnswpr.com — the app-level, declarative hosting
 # state, codified here so hosting is reproducible from the repo and deployed via
-# CLI (`pnpm -F mnswpr run deploy:site`), never the web dashboard. This file is
+# CLI (`pnpm run deploy:site`), never the web dashboard. This file is
 # app infra *config*; the CLI that reads it (`netlify-cli`) is app infra *tooling*
 # and lives in this app's devDependencies. See AGENTS.md "Infra".
 
 # The `deploy:site` script pre-builds locally and uploads `dist` via the CLI, so
 # this [build] block is only exercised when Netlify builds the site from git
-# (dashboard "base directory" = apps/mnswpr). It is a pnpm workspace, so
-# `pnpm install` from here installs the whole monorepo before building.
+# (dashboard "base directory" = the repo root — no longer `apps/mnswpr`).
 [build]
   command = "pnpm install --frozen-lockfile && pnpm run build"
   publish = "dist"
@@ -18,7 +17,7 @@
   # git-triggered builds; local CLI builds read app/.env.production instead.
   # Firebase VITE_* keys are public but are set as Netlify env vars (via
   # `netlify env:set` / `netlify env:import`, not the dashboard) to keep prod
-  # values out of git — see apps/mnswpr/.env.example.
+  # values out of git — see .env.example.
   VITE_LB_NAMESPACE = "mw"
 
 # Pretty URL for the frozen Legends page (built as /legends.html).

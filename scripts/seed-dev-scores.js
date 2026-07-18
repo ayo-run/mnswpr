@@ -13,10 +13,9 @@
  *    firestore.rules to be deployed first (they permit writes to
  *    `mw-test-scores`), else every write returns permission-denied:
  *      npx firebase deploy --only firestore:rules --project dev
- *      (cd apps/mnswpr && node scripts/seed-dev-scores.js)
+ *      node scripts/seed-dev-scores.js
  *
- * `firebase` is an app-workspace dependency, so run it from the app directory so
- * Node can resolve it. Optional namespace override: LB_NAMESPACE=mw-test.
+ * Run from the repo root. Optional namespace override: LB_NAMESPACE=mw-test.
  */
 import { initializeApp } from 'firebase/app'
 import { getFirestore, connectFirestoreEmulator, doc, collection, setDoc } from 'firebase/firestore/lite'

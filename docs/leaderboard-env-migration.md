@@ -139,8 +139,8 @@ Both aliases target the one project we actually have:
 
 ### 7. Deploy & verify
 
-1. `pnpm -F mnswpr exec firebase deploy --only firestore:rules,firestore:indexes --project prod`
-2. Set the Netlify env vars via CLI: `pnpm -F mnswpr exec netlify env:import .env.production` (or `netlify env:set VITE_LB_NAMESPACE mw` + each `VITE_FIREBASE_*`).
+1. `pnpm exec firebase deploy --only firestore:rules,firestore:indexes --project prod`
+2. Set the Netlify env vars via CLI: `pnpm exec netlify env:import .env.production` (or `netlify env:set VITE_LB_NAMESPACE mw` + each `VITE_FIREBASE_*`).
 3. `pnpm dev`, win a game → confirm the write lands in **`mw-test-scores`**, and
    the prod `mw-scores` is untouched (Firestore console).
 4. Confirm reads on both `mw-scores` and `mw-test-scores` succeed under the new
