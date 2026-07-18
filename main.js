@@ -1,7 +1,9 @@
 import mnswpr from '@cozy-games/mnswpr/mnswpr.js'
 import '@cozy-games/mnswpr/mnswpr.css'
 import '@cozy-games/utils/loading/loading.css'
-import * as pkg from '@cozy-games/mnswpr/package.json'
+// The app's own version — this is what the heading shows and what the v* tags
+// and GitHub releases track. Not the engine's version (@cozy-games/mnswpr).
+import * as pkg from './package.json'
 import { configureLeaderboard } from '@cozy-games/leaderboard/leaderboard-element.js'
 import { FirebaseAdapter } from '@cozy-games/leaderboard/adapters/firebase.js'
 import { NicknameService } from './modules/nickname/nickname.js'
