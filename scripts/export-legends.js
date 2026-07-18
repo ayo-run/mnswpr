@@ -130,6 +130,6 @@ ${sections.join('\n')}
 `
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const out = resolve(__dirname, '../legends.html')
+const out = resolve(__dirname, '../src/legends.html')
 writeFileSync(out, html)
 console.log(`\nWrote ${out}`)
